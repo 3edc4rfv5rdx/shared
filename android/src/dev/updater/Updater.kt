@@ -1,0 +1,236 @@
+package dev.updater
+
+import android.app.Activity
+import android.app.Application
+import android.content.Context
+import android.os.Build
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import java.io.File
+import java.util.Locale
+import java.util.concurrent.atomic.AtomicBoolean
+
+/**
+ * The whole updater, as two calls.
+ *
+ * Nothing is downloaded before the user says so: a check fetches a few kilobytes
+ * of manifest, and the APK is only fetched after the confirmation dialog comes
+ * back positive.
+ */
+object Updater {
+
+    private val running = AtomicBoolean(false)
+    private val main = Handler(Looper.getMainLooper())
+
+    // The build the user agreed to install but could not yet, because the app
+    // did not hold the install permission. Sending them to Settings takes them
+    // out of the app, so the answer comes back as a resume rather than a result.
+    private var pendingInfo: UpdateInfo? = null
+    private var pendingConfig: UpdaterConfig? = null
+    private var permissionWatch: Application.ActivityLifecycleCallbacks? = null
+
+    /**
+     * The silent check to call from the launch activity. It stays quiet unless
+     * there is something newer to offer: no dialog for an up-to-date app, none
+     * for an unreachable server, and none more often than the configured
+     * interval or for a build the user cancelled.
+     */
+    fun checkOnStart(activity: Activity, config: UpdaterConfig) {
+        val prefs = UpdaterPrefs(activity)
+        val elapsed = System.currentTimeMillis() - prefs.lastCheckAt
+        if (elapsed < config.checkIntervalHours * 3_600_000L) return
+        check(activity, config, manual = false)
+    }
+
+    /**
+     * The check behind a menu entry. It ignores the interval and a build the
+     * user cancelled, and it reports what it found either way — a silent button is a
+     * broken button.
+     */
+    fun checkNow(activity: Activity, config: UpdaterConfig) {
+        check(activity, config, manual = true)
+    }
+
+    private fun check(activity: Activity, config: UpdaterConfig, manual: Boolean) {
+        // A second check while one is in flight would end in two dialogs over
+        // each other, and both would be about the same version.
+        if (!running.compareAndSet(false, true)) return
+
+        val strings = UpdaterStrings.of(Locale.getDefault())
+        val prefs = UpdaterPrefs(activity)
+        val manifestUrl = "${config.baseUrl.trimEnd('/')}/${config.appKey}/latest.json"
+        val currentCode = currentVersionCode(activity)
+
+        Thread {
+            val body = UpdaterNet.fetchManifest(manifestUrl)
+            val info = body?.let { UpdateInfo.parse(it, config.baseUrl, config.appKey) }
+
+            main.post {
+                running.set(false)
+
+                if (info == null) {
+                    if (manual) UpdaterDialog.message(activity, strings.errorNetwork)
+                    return@post
+                }
+
+                prefs.lastCheckAt = System.currentTimeMillis()
+
+                // A manifest for another app means the config points at the wrong
+                // folder. Installing it would put a second app on the phone rather
+                // than update this one, so it is dropped instead. This is also why
+                // a debug build stays quiet: applicationIdSuffix makes its package
+                // ".debug", which no published manifest names.
+                if (info.packageName != activity.packageName) {
+                    if (manual) UpdaterDialog.message(activity, strings.errorNetwork)
+                    return@post
+                }
+
+                if (info.versionCode <= currentCode) {
+                    if (manual) UpdaterDialog.message(activity, strings.upToDate)
+                    return@post
+                }
+
+                if (!manual && info.versionCode == prefs.declinedVersionCode) return@post
+
+                UpdaterDialog.confirm(
+                    activity = activity,
+                    strings = strings,
+                    info = info,
+                    onUpdate = { startDownload(activity, config, strings, info) },
+                    onCancel = { prefs.declinedVersionCode = info.versionCode },
+                )
+            }
+        }.start()
+    }
+
+    private fun startDownload(
+        activity: Activity,
+        config: UpdaterConfig,
+        strings: UpdaterStrings,
+        info: UpdateInfo,
+    ) {
+        // Asked before the download rather than after it, so a missing permission
+        // costs a tap instead of a finished transfer that goes nowhere.
+        if (!UpdaterInstall.canInstall(activity)) {
+            pendingInfo = info
+            pendingConfig = config
+            watchForPermission(activity.application)
+            UpdaterDialog.installSources(activity, strings)
+            return
+        }
+
+        val dir = File(activity.cacheDir, "updater")
+        dir.mkdirs()
+        // Whatever a previous run left here is either the build now installed or
+        // one abandoned half-way; neither is worth the space.
+        dir.listFiles()?.forEach { it.delete() }
+
+        val target = File(dir, "${config.appKey}-${info.versionCode}.apk")
+        val progress = UpdaterDialog.Progress(activity, strings)
+        progress.show()
+
+        Thread {
+            var lastPercent = -1
+            val actual = UpdaterNet.download(
+                url = info.url,
+                target = target,
+                expectedSize = info.size,
+                isCancelled = { progress.cancelled },
+                onProgress = { downloaded, total ->
+                    if (total > 0L) {
+                        val percent = ((downloaded * 100L) / total).toInt()
+                        // One post per percent, not one per 64 KB block.
+                        if (percent != lastPercent) {
+                            lastPercent = percent
+                            main.post { progress.update(downloaded, total) }
+                        }
+                    }
+                },
+            )
+
+            main.post {
+                progress.dismiss()
+
+                if (progress.cancelled) {
+                    target.delete()
+                    return@post
+                }
+
+                if (actual == null) {
+                    target.delete()
+                    UpdaterDialog.message(activity, strings.errorNetwork)
+                    return@post
+                }
+
+                // The APK's own signature is what actually protects the install —
+                // Android refuses a package signed with another key. This checks
+                // the file arrived whole, which a truncated transfer would not.
+                if (!actual.equals(info.sha256, ignoreCase = true)) {
+                    target.delete()
+                    UpdaterDialog.message(activity, strings.errorCorrupt)
+                    return@post
+                }
+
+                UpdaterInstall.install(activity, target)
+            }
+        }.start()
+    }
+
+    /**
+     * Picks the install back up when the user returns from the Settings screen.
+     *
+     * Nothing here can use an activity result: the dialog that sends them there
+     * is not a result contract, and the updater is not an Activity to receive
+     * one. The next resume of any activity of this app is the signal, and the
+     * watch is dropped on that first resume however it turns out — a user who
+     * refused the permission is not followed around the app.
+     */
+    private fun watchForPermission(app: Application) {
+        if (permissionWatch != null) return
+
+        val watch = object : Application.ActivityLifecycleCallbacks {
+            override fun onActivityResumed(activity: Activity) {
+                stopWatchingForPermission(app)
+
+                val info = pendingInfo ?: return
+                val config = pendingConfig ?: return
+                pendingInfo = null
+                pendingConfig = null
+
+                if (UpdaterInstall.canInstall(activity)) {
+                    startDownload(activity, config, UpdaterStrings.of(Locale.getDefault()), info)
+                }
+            }
+
+            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = Unit
+            override fun onActivityStarted(activity: Activity) = Unit
+            override fun onActivityPaused(activity: Activity) = Unit
+            override fun onActivityStopped(activity: Activity) = Unit
+            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
+            override fun onActivityDestroyed(activity: Activity) = Unit
+        }
+
+        permissionWatch = watch
+        app.registerActivityLifecycleCallbacks(watch)
+    }
+
+    private fun stopWatchingForPermission(app: Application) {
+        permissionWatch?.let { app.unregisterActivityLifecycleCallbacks(it) }
+        permissionWatch = null
+    }
+
+    private fun currentVersionCode(context: Context): Long {
+        return try {
+            val info = context.packageManager.getPackageInfo(context.packageName, 0)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                info.longVersionCode
+            } else {
+                @Suppress("DEPRECATION")
+                info.versionCode.toLong()
+            }
+        } catch (e: Exception) {
+            0L
+        }
+    }
+}

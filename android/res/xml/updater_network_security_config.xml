@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cleartext for the update server and nothing else.
+
+  The server runs plain HTTP on the LAN: its Apache holds a snakeoil certificate
+  that Android would reject anyway, and a private CA to be embedded in eight apps
+  buys nothing here. What protects the install is the APK signature — Android
+  refuses a package signed with another key — and the SHA-256 in the manifest,
+  which catches a truncated transfer.
+
+  An app that already ships its own network_security_config must not use this
+  file: add the domain-config block below to that one instead, or the two
+  resources collide under the same name.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">192.168.54.250</domain>
+    </domain-config>
+</network-security-config>

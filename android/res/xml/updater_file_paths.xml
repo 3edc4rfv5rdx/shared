@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The one folder the updater hands out: the APK it just downloaded, under the
+  app's own cache. Nothing else in the app is exposed through this provider.
+-->
+<paths>
+    <cache-path name="updater" path="updater/" />
+</paths>
