@@ -9,8 +9,13 @@ package dev.updater
  * a manifest whose package is not this app's own.
  */
 data class UpdaterConfig(
-    val baseUrl: String,
     val appKey: String,
+    /**
+     * The home server, and the one place its address is written: every app here
+     * checks the same machine, so moving it must not mean editing eight apps.
+     * An app on another network passes its own.
+     */
+    val baseUrl: String = "http://192.168.54.250:8081",
     /** Hours between two silent start-up checks. A manual check ignores this. */
     val checkIntervalHours: Int = 6,
 )

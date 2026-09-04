@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+- R: The server address is a default in UpdaterConfig, so an app names only its own key and moving the machine is one edit
 - I: One CHANGELOG legend across every project here — N/E/F/R/I, newest on top, the type letter always followed by a colon
 
 - F: Dialogs carry their own pill buttons — white on light, grey on dark — instead of the platform's, so the updater looks the same in every host app.

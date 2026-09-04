@@ -54,11 +54,12 @@ are not one, so this part is by hand.
 Kotlin app, in the launcher activity's `onCreate`:
 
 ```kotlin
-Updater.checkOnStart(this, UpdaterConfig(
-    baseUrl = "http://192.168.54.250:8081",
-    appKey = "reminderlists",
-))
+Updater.checkOnStart(this, UpdaterConfig(appKey = "reminderlists"))
 ```
+
+The app key is all an app has to say: the server address and the check interval
+are defaults in `UpdaterConfig`, so the machine can move without eight apps
+being edited. An app somewhere else passes `baseUrl` of its own.
 
 Flutter app, in `MainActivity.onCreate` — the same call, and Dart is not involved
 at all:
@@ -67,10 +68,7 @@ at all:
 class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Updater.checkOnStart(this, UpdaterConfig(
-            baseUrl = "http://192.168.54.250:8081",
-            appKey = "bikelog",
-        ))
+        Updater.checkOnStart(this, UpdaterConfig(appKey = "bikelog"))
     }
 }
 ```
