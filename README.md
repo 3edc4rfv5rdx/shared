@@ -1,7 +1,7 @@
 # updater
 
 One in-app updater for all the projects in `../`: six Kotlin/Compose apps and two
-Flutter apps. The client checks a static manifest on the home Apache, asks the
+Flutter apps. The client checks the manifest of the newest GitHub release, asks the
 user, and only then downloads and installs.
 
 There is no library module and no Flutter plugin. The Kotlin sources are compiled
@@ -54,12 +54,14 @@ are not one, so this part is by hand.
 Kotlin app, in the launcher activity's `onCreate`:
 
 ```kotlin
-Updater.checkOnStart(this, UpdaterConfig(appKey = "reminderlists"))
+Updater.checkOnStart(this, UpdaterConfig(appKey = "reminderlists", repo = "ReminderLists"))
 ```
 
-The app key is all an app has to say: the server address and the check interval
-are defaults in `UpdaterConfig`, so the machine can move without eight apps
-being edited. An app somewhere else passes `baseUrl` of its own.
+The repository is all an app has to say, and only when its name is not the app
+key itself — `bikelog` and `xcalc` pass nothing but the key. The account and the
+check interval are defaults in `UpdaterConfig`, so neither is written eight
+times. An app published elsewhere passes a `manifestUrl` of its own, which is
+then used exactly as given.
 
 Flutter app, in `MainActivity.onCreate` — the same call, and Dart is not involved
 at all:
@@ -105,10 +107,30 @@ Strings are localized in `UpdaterStrings.kt` (en/ru/uk) rather than in
 one by name would hide the strings from the resource shrinker that every project
 runs in release.
 
-## Server
+## Where builds come from
 
-Apache serves `/var/www/updates/` over plain HTTP on port 8081 — see
-`PROTOCOL.md` for the file layout and why HTTP is enough here.
+Each app reads the manifest of its own newest GitHub release:
 
-Publishing is not wired up yet: it becomes `18-Publish.sh` in each project,
-copying the APK next to a rewritten `latest.json` and linking the new build.
+```
+https://github.com/<user>/<repo>/releases/latest/download/latest.json
+```
+
+Nothing of ours is between the phone and the APK — no server to keep running, no
+address to change, and the update works wherever the device is, not only at
+home. `PROTOCOL.md` has the file itself.
+
+Publishing is `23-ToUpdate.sh`, the same file in every project: run by hand
+after `22-RelUpload.sh`, it asks GitHub what the release carries, reads the
+version code and the SHA-256 out of each APK, and uploads the manifest beside
+them.
+
+## One manifest, every architecture
+
+`latest.json` names all the splits the release carries, and the device chooses:
+the client walks its own `Build.SUPPORTED_ABIS`, so a 64-bit phone takes the
+arm64 APK and an armeabi-v7a TV box the v7a one out of the same file, falling
+back to the universal APK when neither is published.
+
+An update need not match the ABI of what is installed — Android compares the
+package, the signature and the version code — so the fallback is a real one and
+not a compromise.

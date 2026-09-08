@@ -59,19 +59,37 @@ object Updater {
 
         val strings = UpdaterStrings.of(Locale.getDefault())
         val prefs = UpdaterPrefs(activity)
-        val manifestUrl = "${config.baseUrl.trimEnd('/')}/${config.appKey}/latest.json"
+        val manifestUrl = config.manifest
         val currentCode = currentVersionCode(activity)
+
+        // The device's own order of preference, so a 64-bit phone takes the
+        // arm64 split and an armeabi-v7a box the v7a one out of one manifest.
+        val abis = Build.SUPPORTED_ABIS.toList()
 
         Thread {
             val body = UpdaterNet.fetchManifest(manifestUrl)
-            val info = body?.let { UpdateInfo.parse(it, config.baseUrl, config.appKey) }
+            val result = body?.let {
+                UpdateInfo.parse(it, manifestUrl, abis)
+            }
 
             main.post {
                 running.set(false)
 
-                if (info == null) {
-                    if (manual) UpdaterDialog.message(activity, strings.errorNetwork)
-                    return@post
+                val info = when (result) {
+                    is ManifestResult.Ok -> result.info
+
+                    // The server answered, so the check counts and the interval
+                    // starts over; there is simply nothing here for this device.
+                    is ManifestResult.NoBuildForDevice -> {
+                        prefs.lastCheckAt = System.currentTimeMillis()
+                        if (manual) UpdaterDialog.message(activity, strings.errorNoBuild)
+                        return@post
+                    }
+
+                    null, is ManifestResult.Invalid -> {
+                        if (manual) UpdaterDialog.message(activity, strings.errorNetwork)
+                        return@post
+                    }
                 }
 
                 prefs.lastCheckAt = System.currentTimeMillis()
