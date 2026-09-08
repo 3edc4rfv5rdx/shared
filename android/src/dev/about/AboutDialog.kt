@@ -12,6 +12,7 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 
 /**
@@ -46,6 +47,29 @@ internal object AboutDialog {
         private val linkColor = 0xFF0057B8.toInt()
 
         fun dp(value: Int): Int = (value * density).toInt()
+
+        /**
+         * The facts, in a scroller of their own.
+         *
+         * The buttons live outside it: a phone in landscape, or an app with rows
+         * of its own to show, made the card taller than the screen and it was
+         * the buttons at the bottom that went off it.
+         */
+        fun scroller(column: View): ScrollView = ScrollView(activity).apply {
+            isFillViewport = false
+            addView(
+                column,
+                ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                ),
+            )
+        }
+
+        /** A column of facts, to go inside the scroller. */
+        fun column(): LinearLayout = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+        }
 
         /** The dialog body: a column on a white card of its own. */
         fun content(): LinearLayout = LinearLayout(activity).apply {
@@ -93,7 +117,7 @@ internal object AboutDialog {
             addView(
                 TextView(activity).apply {
                     text = value
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f)
                     setTextColor(textColor)
                 }
             )
@@ -186,10 +210,20 @@ internal object AboutDialog {
         val ui = Ui(activity)
         val content = ui.content()
         content.addView(ui.title(appName))
-        if (description.isNotEmpty()) content.addView(ui.paragraph(description))
-        facts.forEach { (label, value) -> content.addView(ui.row(label, value)) }
-        content.addView(ui.linkRow("GitHub", repoUrl) { onOpen(repoUrl) })
-        content.addView(ui.linkRow("E-mail", email) { onMail(email) })
+
+        val column = ui.column()
+        if (description.isNotEmpty()) column.addView(ui.paragraph(description))
+        facts.forEach { (label, value) -> column.addView(ui.row(label, value)) }
+        column.addView(ui.linkRow("GitHub", repoUrl) { onOpen(repoUrl) })
+        column.addView(ui.linkRow("E-mail", email) { onMail(email) })
+        content.addView(
+            ui.scroller(column),
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                1f,
+            ),
+        )
 
         val dialog = AlertDialog.Builder(activity).setView(content).create()
         val pills = mutableListOf<View>()
