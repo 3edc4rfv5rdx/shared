@@ -1,0 +1,194 @@
+package dev.about
+
+import android.app.Activity
+import android.app.AlertDialog
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
+import android.os.Build
+import android.util.TypedValue
+import android.view.Gravity
+import android.view.View
+import android.view.ViewGroup
+import android.widget.LinearLayout
+import android.widget.TextView
+
+/**
+ * The About screen, built in code.
+ *
+ * It carries its own content and its own buttons rather than the platform's, and
+ * the same black-on-white card ../updater draws: one dialog serves Compose apps
+ * and Flutter apps alike, so its look is its own in all of them instead of
+ * half-belonging to whichever toolkit the host happens to use.
+ */
+internal object AboutDialog {
+
+    /** A dialog can only be shown on an activity that is still there to hold it. */
+    private fun alive(activity: Activity): Boolean = !activity.isFinishing && !activity.isDestroyed
+
+    /**
+     * The pieces this dialog is made of, and the colours they use.
+     *
+     * Fixed rather than the host's: this code cannot ask the app which colours it
+     * is drawing in — one that picks its theme in Compose leaves both the
+     * system's night flag and the activity's XML theme saying something else —
+     * and a dialog that guesses wrong is a dialog nobody can read.
+     */
+    private class Ui(val activity: Activity) {
+        private val density = activity.resources.displayMetrics.density
+
+        private val cardFill = 0xFFFFFFFF.toInt()
+        private val pillFill = 0xFFFFFFFF.toInt()
+        private val pillStroke = 0xFF000000.toInt()
+        private val textColor = 0xFF000000.toInt()
+        private val labelColor = 0xFF666666.toInt()
+        private val linkColor = 0xFF0057B8.toInt()
+
+        fun dp(value: Int): Int = (value * density).toInt()
+
+        /** The dialog body: a column on a white card of its own. */
+        fun content(): LinearLayout = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(24), dp(24), dp(24), dp(16))
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dp(16).toFloat()
+                setColor(cardFill)
+            }
+        }
+
+        fun title(text: String): TextView = TextView(activity).apply {
+            this.text = text
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 26f)
+            setTextColor(textColor)
+            setPadding(0, 0, 0, dp(16))
+        }
+
+        /**
+         * One fact: its label above in grey, the value under it in black.
+         *
+         * Two lines rather than a label column, because the values here are of
+         * every width — a version, a date, a mail address — and a column wide
+         * enough for the longest of them leaves the short ones stranded.
+         */
+        fun row(label: String, value: String): LinearLayout = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, 0, 0, dp(12))
+            addView(
+                TextView(activity).apply {
+                    text = label
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+                    setTextColor(labelColor)
+                }
+            )
+            addView(
+                TextView(activity).apply {
+                    text = value
+                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
+                    setTextColor(textColor)
+                }
+            )
+        }
+
+        /** A row whose value is a link: underlined, and it opens something. */
+        fun linkRow(label: String, value: String, onClick: () -> Unit): LinearLayout =
+            row(label, value).apply {
+                val text = getChildAt(1) as TextView
+                text.setTextColor(linkColor)
+                text.paintFlags = text.paintFlags or Paint.UNDERLINE_TEXT_FLAG
+                isClickable = true
+                setOnClickListener { onClick() }
+            }
+
+        /**
+         * A pill: fully rounded, because the radius is larger than the button can
+         * ever be tall, so the ends stay semicircular whatever the text does to
+         * the height.
+         */
+        fun pill(label: String, inverted: Boolean = false, onClick: () -> Unit): TextView =
+            TextView(activity).apply {
+                text = label
+                gravity = Gravity.CENTER
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
+                setTextColor(if (inverted) cardFill else textColor)
+                setPadding(dp(14), dp(13), dp(14), dp(13))
+                isClickable = true
+                background = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = dp(100).toFloat()
+                    setColor(if (inverted) textColor else pillFill)
+                    setStroke(dp(1), pillStroke)
+                }
+                setOnClickListener { onClick() }
+            }
+
+        /** The pills stacked, each across the full width. */
+        fun buttons(vararg pills: View): LinearLayout = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(24), 0, 0)
+            pills.forEachIndexed { index, pill ->
+                val params = LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                )
+                if (index > 0) params.topMargin = dp(10)
+                addView(pill, params)
+            }
+        }
+    }
+
+    /**
+     * Shows a dialog whose content already carries its own card: the window's own
+     * background would otherwise sit behind it as a second, differently coloured
+     * panel with square corners showing past the rounded ones.
+     */
+    private fun present(dialog: AlertDialog) {
+        val window = dialog.window
+        window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        // Force Dark would repaint this hierarchy on its own in a dark host — the
+        // white card turned dark and the black text light, which is exactly the
+        // guessing this dialog was made not to do.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window?.decorView?.isForceDarkAllowed = false
+        }
+        dialog.show()
+    }
+
+    /**
+     * The dialog itself: what this app is, and the two places it can be answered
+     * from.
+     *
+     * [onUpdate] is null when the app publishes no releases, and then the button
+     * is simply not there — a check that cannot answer is worse than none.
+     */
+    fun show(
+        activity: Activity,
+        strings: AboutStrings,
+        appName: String,
+        facts: List<Pair<String, String>>,
+        repoUrl: String,
+        email: String,
+        onOpen: (String) -> Unit,
+        onMail: (String) -> Unit,
+        onUpdate: (() -> Unit)?,
+    ) {
+        if (!alive(activity)) return
+        val ui = Ui(activity)
+        val content = ui.content()
+        content.addView(ui.title(appName))
+        facts.forEach { (label, value) -> content.addView(ui.row(label, value)) }
+        content.addView(ui.linkRow("GitHub", repoUrl) { onOpen(repoUrl) })
+        content.addView(ui.linkRow("E-mail", email) { onMail(email) })
+
+        val dialog = AlertDialog.Builder(activity).setView(content).create()
+        val pills = mutableListOf<View>()
+        if (onUpdate != null) {
+            pills.add(ui.pill(strings.update, inverted = true) { dialog.dismiss(); onUpdate() })
+        }
+        pills.add(ui.pill(strings.close) { dialog.dismiss() })
+        content.addView(ui.buttons(*pills.toTypedArray()))
+
+        present(dialog)
+    }
+}
