@@ -66,8 +66,9 @@ AboutConfig(
 )
 ```
 
-`offerUpdate = false` drops the Update button, for an app whose builds are not
-published as releases. `email` is a default — the same mailbox in every app —
+`description` puts a sentence above the facts, for an app whose name does not
+say what it is. `offerUpdate = false` drops the Update button, for an app whose
+builds are not published as releases. `email` is a default — the same mailbox in every app —
 and is there to be overridden, not to be repeated.
 
 ## What it puts on screen

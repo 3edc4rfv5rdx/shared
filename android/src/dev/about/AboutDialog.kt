@@ -58,6 +58,14 @@ internal object AboutDialog {
             }
         }
 
+        /** A sentence, not a fact: no label above it and room under it. */
+        fun paragraph(text: String): TextView = TextView(activity).apply {
+            this.text = text
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+            setTextColor(textColor)
+            setPadding(0, 0, 0, dp(16))
+        }
+
         fun title(text: String): TextView = TextView(activity).apply {
             this.text = text
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 26f)
@@ -166,6 +174,7 @@ internal object AboutDialog {
         activity: Activity,
         strings: AboutStrings,
         appName: String,
+        description: String,
         facts: List<Pair<String, String>>,
         repoUrl: String,
         email: String,
@@ -177,6 +186,7 @@ internal object AboutDialog {
         val ui = Ui(activity)
         val content = ui.content()
         content.addView(ui.title(appName))
+        if (description.isNotEmpty()) content.addView(ui.paragraph(description))
         facts.forEach { (label, value) -> content.addView(ui.row(label, value)) }
         content.addView(ui.linkRow("GitHub", repoUrl) { onOpen(repoUrl) })
         content.addView(ui.linkRow("E-mail", email) { onMail(email) })

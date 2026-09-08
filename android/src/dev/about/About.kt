@@ -35,6 +35,7 @@ object About {
             activity = activity,
             strings = strings,
             appName = appName(activity),
+            description = config.description,
             facts = facts,
             repoUrl = config.updater.repoUrl,
             email = config.email,

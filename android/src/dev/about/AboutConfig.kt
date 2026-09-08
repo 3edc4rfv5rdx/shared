@@ -25,6 +25,11 @@ data class AboutConfig(
     val buildDate: String = "",
     /** The mailbox every app here is reached at. */
     val email: String = "3edc4rfv5rdx@gmail.com",
+    /**
+     * One sentence about what the app is, shown above the facts. Empty in an app
+     * whose name already says it.
+     */
+    val description: String = "",
     /** Extra lines, label to value, shown under the ones every app has. */
     val extra: List<Pair<String, String>> = emptyList(),
     /**
