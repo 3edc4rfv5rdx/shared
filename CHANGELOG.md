@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+- F: The dialogs are centred whatever the host's theme does with dialogs — on One UI a DeviceDefault app slid them to the bottom edge
 - N: Updates come from the app's own GitHub release — /releases/latest/download/latest.json — so a device updates wherever it is and nothing of ours has to keep running
 - N: One manifest names every ABI split and the device picks its own by Build.SUPPORTED_ABIS, so the arm64 phone and the armeabi-v7a TV box update from one file
 - I: The local Apache server is gone, and with it its site config, its install notes and 18-ToUpdate.sh; 23-ToUpdate.sh writes the manifest after the release upload, describing the assets GitHub already has

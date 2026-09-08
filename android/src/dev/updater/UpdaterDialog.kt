@@ -40,6 +40,10 @@ internal object UpdaterDialog {
     private fun present(dialog: AlertDialog) {
         val window = dialog.window
         window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+        // Centred on purpose: a host on the platform's own DeviceDefault theme
+        // gets whatever the vendor does with dialogs, and One UI slides them to
+        // the bottom edge. One updater in eight apps means one position too.
+        window?.setGravity(Gravity.CENTER)
         // Force Dark would repaint this hierarchy on its own in a dark host — the
         // white card turned dark and the black text light, which is exactly the
         // guessing this dialog was made not to do.
