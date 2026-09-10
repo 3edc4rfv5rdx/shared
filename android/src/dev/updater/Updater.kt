@@ -35,10 +35,12 @@ object Updater {
      * The silent check to call from the launch activity. It stays quiet unless
      * there is something newer to offer: no dialog for an up-to-date app, none
      * for an unreachable server, and none more often than the configured
-     * interval or for a build the user cancelled.
+     * interval or for a build the user cancelled. Nothing at all when the user
+     * has turned it off — see [setEnabled].
      */
     fun checkOnStart(activity: Activity, config: UpdaterConfig) {
         val prefs = UpdaterPrefs(activity)
+        if (!prefs.enabled) return
         val elapsed = System.currentTimeMillis() - prefs.lastCheckAt
         if (elapsed < config.checkIntervalHours * 3_600_000L) return
         check(activity, config, manual = false)
@@ -51,6 +53,20 @@ object Updater {
      */
     fun checkNow(activity: Activity, config: UpdaterConfig) {
         check(activity, config, manual = true)
+    }
+
+    /**
+     * Whether the start-up check is on. The settings switch reads this.
+     *
+     * It governs [checkOnStart] alone: [checkNow] is a button the user has just
+     * pressed and [peek] is a screen asking on their behalf, and neither is the
+     * unasked-for interruption this switch exists to stop.
+     */
+    fun isEnabled(context: Context): Boolean = UpdaterPrefs(context).enabled
+
+    /** Turns the start-up check on or off. */
+    fun setEnabled(context: Context, enabled: Boolean) {
+        UpdaterPrefs(context).enabled = enabled
     }
 
     /**

@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+- N: An on/off flag of the module's own, Updater.isEnabled/setEnabled, so every app can offer "check at launch" as a settings switch instead of keeping that preference itself; it stops the start-up check alone, never the button
 - N: Updater.peek asks the server and answers its caller instead of the user — a check that shows no dialog, remembers nothing and spends no start-up turn, for a host that draws the answer itself
 - F: The dialogs are centred whatever the host's theme does with dialogs — on One UI a DeviceDefault app slid them to the bottom edge
 - N: Updates come from the app's own GitHub release — /releases/latest/download/latest.json — so a device updates wherever it is and nothing of ours has to keep running

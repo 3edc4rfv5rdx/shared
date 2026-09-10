@@ -78,6 +78,19 @@ class MainActivity : FlutterActivity() {
 For a "check for updates" menu entry, `Updater.checkNow(activity, config)` skips
 the interval and reports the result either way.
 
+## Settings
+
+The module keeps its own on/off flag and gives a settings screen the two calls
+it needs — `Updater.isEnabled(context)` and `Updater.setEnabled(context, on)`.
+The switch itself belongs to the app: every project here draws its settings in
+its own style, with its own localized string.
+
+Default is on. Off stops the start-up check only; the About dialog's button and
+its silent look both still work, because neither is the unasked-for interruption
+the switch exists to stop.
+
+## Asking without showing anything
+
 `Updater.peek(activity, config) { newer -> }` asks the same question and shows
 nothing: the answer comes back on the main thread, for a screen that draws it
 itself. It remembers nothing — neither the interval nor a declined build — so a
