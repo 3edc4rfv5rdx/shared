@@ -244,7 +244,7 @@ prefs classes.
 
 ---
 
-### 7. P3 — The archive is published before it is on disk
+### 7. P3 [FIXED 072b1c8] — The archive is published before it is on disk
 
 **Affected components:** `Backups.perform` (lines 150-158: `openOutputStream(uri)?.use`
 → `publish`); `UpdaterNet.download` line 88 (`output.fd.sync()` — the other module does it);
