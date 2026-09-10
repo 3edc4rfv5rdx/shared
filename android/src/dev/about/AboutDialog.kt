@@ -14,6 +14,7 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import dev.updater.UpdaterColors
 
 /**
  * The About screen, built in code.
@@ -29,22 +30,16 @@ internal object AboutDialog {
     private fun alive(activity: Activity): Boolean = !activity.isFinishing && !activity.isDestroyed
 
     /**
-     * The pieces this dialog is made of, and the colours they use.
-     *
-     * Fixed rather than the host's: this code cannot ask the app which colours it
-     * is drawing in — one that picks its theme in Compose leaves both the
-     * system's night flag and the activity's XML theme saying something else —
-     * and a dialog that guesses wrong is a dialog nobody can read.
+     * The pieces this dialog is made of, in the colours [UpdaterColors] keeps for
+     * both modules — so the card the update button opens is the same card.
      */
     private class Ui(val activity: Activity) {
         private val density = activity.resources.displayMetrics.density
 
-        private val cardFill = 0xFFFFFFFF.toInt()
-        private val pillFill = 0xFFFFFFFF.toInt()
-        private val pillStroke = 0xFF000000.toInt()
-        private val textColor = 0xFF000000.toInt()
-        private val labelColor = 0xFF666666.toInt()
-        private val linkColor = 0xFF0057B8.toInt()
+        private val cardFill = UpdaterColors.card
+        private val textColor = UpdaterColors.text
+        private val labelColor = UpdaterColors.label
+        private val linkColor = UpdaterColors.link
 
         fun dp(value: Int): Int = (value * density).toInt()
 
@@ -151,16 +146,18 @@ internal object AboutDialog {
         /**
          * What a pill says and how it is filled, in one place: the update button
          * is drawn once before the server has been asked and again with the
-         * answer, and the two have to agree on everything but the two colours.
+         * answer, and the two have to agree on everything but the fill.
          */
         fun style(pill: TextView, label: String, inverted: Boolean) {
             pill.text = label
-            pill.setTextColor(if (inverted) cardFill else textColor)
+            // A found update is the one thing this card can do for the user, so it
+            // is the filled pill; everything else is the same violet as a tint.
+            pill.setTextColor(if (inverted) UpdaterColors.onAccent else UpdaterColors.onAccentSoft)
             pill.background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
                 cornerRadius = dp(100).toFloat()
-                setColor(if (inverted) textColor else pillFill)
-                setStroke(dp(1), pillStroke)
+                setColor(if (inverted) UpdaterColors.accent else UpdaterColors.accentSoft)
+                setStroke(dp(2), UpdaterColors.pillStroke)
             }
         }
 
