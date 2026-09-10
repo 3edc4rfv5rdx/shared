@@ -12,7 +12,8 @@ import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
- * The whole updater, as two calls.
+ * The whole updater, as three calls: the silent check at start-up, the one
+ * behind a button, and a look that answers its caller instead of the user.
  *
  * Nothing is downloaded before the user says so: a check fetches a few kilobytes
  * of manifest, and the APK is only fetched after the confirmation dialog comes
@@ -52,6 +53,42 @@ object Updater {
         check(activity, config, manual = true)
     }
 
+    /**
+     * A check that answers instead of showing anything: true when the release
+     * folder holds a build newer than the installed one, false for everything
+     * else — up to date, nothing for this device, a manifest for another app, an
+     * unreachable server. For a caller that draws the answer itself, such as the
+     * About screen's button.
+     *
+     * It remembers nothing. The interval and the declined build belong to the
+     * check that actually offers an update; a look that only colours a button
+     * must not spend the next start-up check's turn.
+     *
+     * [onResult] runs on the main thread, and not at all if the activity is gone
+     * by the time the answer arrives.
+     */
+    fun peek(activity: Activity, config: UpdaterConfig, onResult: (Boolean) -> Unit) {
+        val manifestUrl = config.manifest
+        val packageName = activity.packageName
+        val currentCode = currentVersionCode(activity)
+        val abis = Build.SUPPORTED_ABIS.toList()
+
+        Thread {
+            val info = (fetch(manifestUrl, abis) as? ManifestResult.Ok)?.info
+            val newer = info != null &&
+                info.packageName == packageName &&
+                info.versionCode > currentCode
+
+            main.post {
+                if (!activity.isFinishing && !activity.isDestroyed) onResult(newer)
+            }
+        }.start()
+    }
+
+    /** The manifest as this device reads it; null when the server said nothing usable. */
+    private fun fetch(manifestUrl: String, abis: List<String>): ManifestResult? =
+        UpdaterNet.fetchManifest(manifestUrl)?.let { UpdateInfo.parse(it, manifestUrl, abis) }
+
     private fun check(activity: Activity, config: UpdaterConfig, manual: Boolean) {
         // A second check while one is in flight would end in two dialogs over
         // each other, and both would be about the same version.
@@ -67,10 +104,7 @@ object Updater {
         val abis = Build.SUPPORTED_ABIS.toList()
 
         Thread {
-            val body = UpdaterNet.fetchManifest(manifestUrl)
-            val result = body?.let {
-                UpdateInfo.parse(it, manifestUrl, abis)
-            }
+            val result = fetch(manifestUrl, abis)
 
             main.post {
                 running.set(false)

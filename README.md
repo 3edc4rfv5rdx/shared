@@ -78,6 +78,11 @@ class MainActivity : FlutterActivity() {
 For a "check for updates" menu entry, `Updater.checkNow(activity, config)` skips
 the interval and reports the result either way.
 
+`Updater.peek(activity, config) { newer -> }` asks the same question and shows
+nothing: the answer comes back on the main thread, for a screen that draws it
+itself. It remembers nothing — neither the interval nor a declined build — so a
+look never costs the start-up check its turn.
+
 ## What the user sees
 
 `checkOnStart` fetches a few kilobytes of manifest and stays silent unless there
