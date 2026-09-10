@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+- E: An update dialog lost to a screen going away is offered again on the next start instead of six hours later
 - E: A second check cannot start while a download is running, and the installer is only ever given the file whose checksum was verified
 - E: The start-up check runs again after the phone clock has been moved back, instead of waiting for it to catch up
 - E: Cancel on the permission dialog forgets the install instead of starting it on the next screen the user comes back to
