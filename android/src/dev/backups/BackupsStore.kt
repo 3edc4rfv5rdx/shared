@@ -83,6 +83,8 @@ internal object BackupsStore {
      */
     fun prune(context: Context, config: BackupsConfig): Int {
         val resolver = context.contentResolver
+        // The LIKE is a coarse prefilter and nothing more: SQL LIKE is case-insensitive and
+        // its wildcard takes anything, so the pool is decided per row by isPoolName below.
         val pattern = likeLiteral(config.filePrefix) + "%" + likeLiteral(config.extension)
         // MediaStore normalises a stored path to a trailing slash; the value handed to insert
         // has none. Both spellings are asked for rather than matched with LIKE, which would
@@ -96,7 +98,7 @@ internal object BackupsStore {
         try {
             resolver.query(
                 collection,
-                arrayOf(BaseColumns._ID),
+                arrayOf(BaseColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME),
                 selection,
                 args,
                 // Newest first, and by id where two copies share a second — DATE_ADDED has no
@@ -105,8 +107,12 @@ internal object BackupsStore {
                 "${MediaStore.MediaColumns.DATE_ADDED} DESC, ${BaseColumns._ID} DESC",
             )?.use { cursor ->
                 val idColumn = cursor.getColumnIndexOrThrow(BaseColumns._ID)
+                val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
                 var kept = 0
                 while (cursor.moveToNext()) {
+                    // A name of another shape was put here by the user, or by an app sharing
+                    // the folder: neither counted against keepCount nor ever deleted.
+                    if (!config.isPoolName(cursor.getString(nameColumn).orEmpty())) continue
                     if (kept < config.keepCount) kept++ else doomed += cursor.getLong(idColumn)
                 }
             }

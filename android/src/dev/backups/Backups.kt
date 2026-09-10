@@ -180,11 +180,11 @@ object Backups {
     }
 
     /**
-     * Sortable, second-resolution, and the same shape in every project. Only ever
-     * touched inside [perform], which runs one at a time, so its lack of
-     * thread-safety cannot bite.
+     * The timestamp in every file name, in the one shape [BackupsConfig.isPoolName]
+     * recognises. Only ever touched inside [perform], which runs one at a time, so
+     * its lack of thread-safety cannot bite.
      */
-    private val TIMESTAMP = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US)
+    private val TIMESTAMP = SimpleDateFormat(BackupsConfig.TIMESTAMP_PATTERN, Locale.US)
 
     /**
      * Counts what the app's writer actually produced. It delegates every write
