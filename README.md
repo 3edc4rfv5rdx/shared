@@ -84,7 +84,7 @@ initialised.
   are what is on the phone.
 - **A failed attempt waits an hour** before the next one, so a phone with no
   free space is not asked to build an archive on every launch.
-- **The archive is written pending and published only when finished**, so a
+- **The archive is written pending, synced to disk and only then published**, so a
   half-written file is never visible and never counts as a copy. An empty one is
   refused outright.
 - **Rotation runs after a successful copy, never before, and never on that copy.** A backup that failed
