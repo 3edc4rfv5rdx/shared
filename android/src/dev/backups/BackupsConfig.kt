@@ -1,5 +1,6 @@
 package dev.backups
 
+import android.webkit.MimeTypeMap
 import java.io.OutputStream
 
 /**
@@ -25,6 +26,7 @@ data class BackupsConfig(
      * they stay on the phone and are never rotated again.
      */
     val filePrefix: String,
+    /** Must be the extension MediaStore knows for [mimeType], or the file is renamed — see init. */
     val extension: String = ".zip",
     val mimeType: String = "application/zip",
     /** How many copies survive. The newest [keepCount] are kept, the rest deleted. */
@@ -47,6 +49,14 @@ data class BackupsConfig(
         require(filePrefix.isNotBlank()) { "filePrefix must not be blank" }
         require(extension.startsWith(".")) { "extension must start with a dot" }
         require(keepCount >= 1) { "keepCount must be at least 1" }
+        // MediaStore's own rule, applied here so it fails at wiring time and not in the
+        // folder: a display name whose extension does not resolve to MIME_TYPE gets the
+        // type's extension appended — "backup.db" published as "backup.db.zip" — and a
+        // copy called that would never match isPoolName and never rotate.
+        val typeOfExtension = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension.drop(1))
+        require(typeOfExtension.equals(mimeType, ignoreCase = true)) {
+            "extension $extension does not belong to $mimeType; MediaStore would rename the file"
+        }
     }
 
     /**
