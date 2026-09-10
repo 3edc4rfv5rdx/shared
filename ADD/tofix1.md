@@ -291,7 +291,7 @@ check that could not run at all says so.
 
 ---
 
-### 9. P3 — About duplicates the updater's dialog chrome
+### 9. P3 [FIXED 418280c + 41d6257] — About duplicates the updater's dialog chrome
 
 **Affected components:** `about/android/src/dev/about/AboutDialog.kt` (`alive`, `present`,
 `Ui.dp`, `Ui.content`, `Ui.title`, `Ui.pill`, `Ui.buttons`) versus

@@ -13,8 +13,9 @@ dependency at all — the whole thing is `AlertDialog`, `LinearLayout` and
 The dialog is drawn in code rather than in Compose, for the same reason the
 updater's are: one copy serves Compose apps and Flutter apps alike, so its look
 belongs to it in all of them instead of half-belonging to whichever toolkit the
-host happens to use. A white card in every app and either theme, with the
-buttons and the links in the violet `UpdaterColors` keeps for both modules.
+host happens to use. The card, the pills and the way on screen are `UpdaterUi`,
+the kit `../updater` keeps for both modules, in the violet of `UpdaterColors`;
+only the facts are drawn here.
 
 ## What it costs a project
 
