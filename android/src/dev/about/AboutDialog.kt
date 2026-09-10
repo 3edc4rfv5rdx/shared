@@ -2,200 +2,95 @@ package dev.about
 
 import android.app.Activity
 import android.app.AlertDialog
-import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.drawable.ColorDrawable
-import android.graphics.drawable.GradientDrawable
-import android.os.Build
 import android.util.TypedValue
-import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import dev.updater.UpdaterColors
+import dev.updater.UpdaterUi
 
 /**
- * The About screen, built in code.
- *
- * It carries its own content and its own buttons rather than the platform's, and
- * the same black-on-white card ../updater draws: one dialog serves Compose apps
- * and Flutter apps alike, so its look is its own in all of them instead of
- * half-belonging to whichever toolkit the host happens to use.
+ * The About screen, built in code on ../updater's [UpdaterUi]: the card, the
+ * pills and the way on screen are the kit's, so the card the update button
+ * opens is the card it came from. What is written here is only what About
+ * shows that no other dialog does.
  */
 internal object AboutDialog {
 
-    /** A dialog can only be shown on an activity that is still there to hold it. */
-    private fun alive(activity: Activity): Boolean = !activity.isFinishing && !activity.isDestroyed
+    /**
+     * What is About's own on top of [UpdaterUi]: the facts. A sentence, a
+     * labelled value, a value that opens something, and the scroller they go in.
+     */
 
     /**
-     * The pieces this dialog is made of, in the colours [UpdaterColors] keeps for
-     * both modules — so the card the update button opens is the same card.
+     * The facts, in a scroller of their own.
+     *
+     * The buttons live outside it: a phone in landscape, or an app with rows
+     * of its own to show, made the card taller than the screen and it was
+     * the buttons at the bottom that went off it.
      */
-    private class Ui(val activity: Activity) {
-        private val density = activity.resources.displayMetrics.density
+    private fun UpdaterUi.scroller(column: View): ScrollView = ScrollView(activity).apply {
+        isFillViewport = false
+        addView(
+            column,
+            ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ),
+        )
+    }
 
-        private val cardFill = UpdaterColors.card
-        private val textColor = UpdaterColors.text
-        private val labelColor = UpdaterColors.label
-        private val linkColor = UpdaterColors.link
+    /** A column of facts, to go inside the scroller. */
+    private fun UpdaterUi.column(): LinearLayout = LinearLayout(activity).apply {
+        orientation = LinearLayout.VERTICAL
+    }
 
-        fun dp(value: Int): Int = (value * density).toInt()
+    /** A sentence, not a fact: no label above it and room under it. */
+    private fun UpdaterUi.paragraph(text: String): TextView = TextView(activity).apply {
+        this.text = text
+        setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+        setTextColor(UpdaterColors.text)
+        setPadding(0, 0, 0, dp(16))
+    }
 
-        /**
-         * The facts, in a scroller of their own.
-         *
-         * The buttons live outside it: a phone in landscape, or an app with rows
-         * of its own to show, made the card taller than the screen and it was
-         * the buttons at the bottom that went off it.
-         */
-        fun scroller(column: View): ScrollView = ScrollView(activity).apply {
-            isFillViewport = false
-            addView(
-                column,
-                ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                ),
-            )
-        }
-
-        /** A column of facts, to go inside the scroller. */
-        fun column(): LinearLayout = LinearLayout(activity).apply {
-            orientation = LinearLayout.VERTICAL
-        }
-
-        /** The dialog body: a column on a white card of its own. */
-        fun content(): LinearLayout = LinearLayout(activity).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(24), dp(24), dp(24), dp(16))
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = dp(16).toFloat()
-                setColor(cardFill)
-            }
-        }
-
-        /** A sentence, not a fact: no label above it and room under it. */
-        fun paragraph(text: String): TextView = TextView(activity).apply {
-            this.text = text
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
-            setTextColor(textColor)
-            setPadding(0, 0, 0, dp(16))
-        }
-
-        fun title(text: String): TextView = TextView(activity).apply {
-            this.text = text
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 26f)
-            setTextColor(textColor)
-            setPadding(0, 0, 0, dp(16))
-        }
-
-        /**
-         * One fact: its label above in grey, the value under it in black.
-         *
-         * Two lines rather than a label column, because the values here are of
-         * every width — a version, a date, a mail address — and a column wide
-         * enough for the longest of them leaves the short ones stranded.
-         */
-        fun row(label: String, value: String): LinearLayout = LinearLayout(activity).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(0, 0, 0, dp(12))
-            addView(
-                TextView(activity).apply {
-                    text = label
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
-                    setTextColor(labelColor)
-                }
-            )
-            addView(
-                TextView(activity).apply {
-                    text = value
-                    setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f)
-                    setTextColor(textColor)
-                }
-            )
-        }
-
-        /** A row whose value is a link: underlined, and it opens something. */
-        fun linkRow(label: String, value: String, onClick: () -> Unit): LinearLayout =
-            row(label, value).apply {
-                val text = getChildAt(1) as TextView
-                text.setTextColor(linkColor)
-                text.paintFlags = text.paintFlags or Paint.UNDERLINE_TEXT_FLAG
-                isClickable = true
-                setOnClickListener { onClick() }
-            }
-
-        /**
-         * A pill: fully rounded, because the radius is larger than the button can
-         * ever be tall, so the ends stay semicircular whatever the text does to
-         * the height.
-         */
-        fun pill(label: String, onClick: () -> Unit): TextView =
+    /**
+     * One fact: its label above in grey, the value under it in black.
+     *
+     * Two lines rather than a label column, because the values here are of
+     * every width — a version, a date, a mail address — and a column wide
+     * enough for the longest of them leaves the short ones stranded.
+     */
+    private fun UpdaterUi.row(label: String, value: String): LinearLayout = LinearLayout(activity).apply {
+        orientation = LinearLayout.VERTICAL
+        setPadding(0, 0, 0, dp(12))
+        addView(
             TextView(activity).apply {
-                gravity = Gravity.CENTER
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
-                setPadding(dp(14), dp(13), dp(14), dp(13))
-                isClickable = true
-                style(this, label, inverted = false)
-                setOnClickListener { onClick() }
+                text = label
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+                setTextColor(UpdaterColors.label)
             }
-
-        /**
-         * What a pill says and how it is filled, in one place: the update button
-         * is drawn once before the server has been asked and again with the
-         * answer, and the two have to agree on everything but the fill.
-         */
-        fun style(pill: TextView, label: String, inverted: Boolean) {
-            pill.text = label
-            // A found update is the one thing this card can do for the user, so it
-            // is the filled pill; everything else is the same violet as a tint.
-            pill.setTextColor(if (inverted) UpdaterColors.onAccent else UpdaterColors.onAccentSoft)
-            pill.background = GradientDrawable().apply {
-                shape = GradientDrawable.RECTANGLE
-                cornerRadius = dp(100).toFloat()
-                setColor(if (inverted) UpdaterColors.accent else UpdaterColors.accentSoft)
-                setStroke(dp(2), UpdaterColors.pillStroke)
+        )
+        addView(
+            TextView(activity).apply {
+                text = value
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f)
+                setTextColor(UpdaterColors.text)
             }
-        }
-
-        /** The pills stacked, each across the full width. */
-        fun buttons(vararg pills: View): LinearLayout = LinearLayout(activity).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(0, dp(24), 0, 0)
-            pills.forEachIndexed { index, pill ->
-                val params = LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                )
-                if (index > 0) params.topMargin = dp(10)
-                addView(pill, params)
-            }
-        }
+        )
     }
 
-    /**
-     * Shows a dialog whose content already carries its own card: the window's own
-     * background would otherwise sit behind it as a second, differently coloured
-     * panel with square corners showing past the rounded ones.
-     */
-    private fun present(dialog: AlertDialog) {
-        val window = dialog.window
-        window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
-        // Centred on purpose: a host on the platform's own DeviceDefault theme
-        // gets whatever the vendor does with dialogs, and One UI slides them to
-        // the bottom edge. One dialog in eight apps means one position too.
-        window?.setGravity(Gravity.CENTER)
-        // Force Dark would repaint this hierarchy on its own in a dark host — the
-        // white card turned dark and the black text light, which is exactly the
-        // guessing this dialog was made not to do.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            window?.decorView?.isForceDarkAllowed = false
+    /** A row whose value is a link: underlined, and it opens something. */
+    private fun UpdaterUi.linkRow(label: String, value: String, onClick: () -> Unit): LinearLayout =
+        row(label, value).apply {
+            val text = getChildAt(1) as TextView
+            text.setTextColor(UpdaterColors.link)
+            text.paintFlags = text.paintFlags or Paint.UNDERLINE_TEXT_FLAG
+            isClickable = true
+            setOnClickListener { onClick() }
         }
-        dialog.show()
-    }
 
     /**
      * The dialog itself: what this app is, and the two places it can be answered
@@ -222,8 +117,8 @@ internal object AboutDialog {
         onUpdate: (() -> Unit)?,
         onProbe: (((Boolean) -> Unit) -> Unit)? = null,
     ) {
-        if (!alive(activity)) return
-        val ui = Ui(activity)
+        if (!UpdaterUi.alive(activity)) return
+        val ui = UpdaterUi(activity)
         val content = ui.content()
         content.addView(ui.title(appName))
 
@@ -255,6 +150,6 @@ internal object AboutDialog {
         pills.add(ui.pill(strings.close) { dialog.dismiss() })
         content.addView(ui.buttons(*pills.toTypedArray()))
 
-        present(dialog)
+        UpdaterUi.present(activity, dialog)
     }
 }
