@@ -43,7 +43,10 @@ fun backupsConfig(context: Context): BackupsConfig {
 ```
 
 `keepCount` defaults to three and `extension` to `.zip`; an app that wants
-other values passes them.
+other values passes them. `extension` and `mimeType` have to agree the way
+MediaStore sees it (`.zip` is `application/zip`): a mismatch is refused when
+the config is built, because MediaStore would otherwise rename the file on
+publish and rotation would never recognise it.
 
 `write` is the app's entire share of the work: fill this stream with one
 complete archive, throw if you cannot. It is called on a background thread and
