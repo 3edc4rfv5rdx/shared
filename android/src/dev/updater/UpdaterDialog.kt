@@ -47,16 +47,26 @@ internal object UpdaterDialog {
      * however the dialog goes: a pill, a tap outside, Back — or the activity
      * being destroyed under it, which the framework does without a word to the
      * dialog. The activity is watched for that and the dialog dismissed by hand,
-     * so an operation waiting on the answer is never left waiting for good.
+     * so an operation waiting on the answer is never left waiting for good. The
+     * flag says which it was: true when the user closed it, false when the
+     * activity went and nobody saw the dialog to its end.
      */
-    private fun present(activity: Activity, dialog: AlertDialog, onDismiss: (() -> Unit)? = null): Boolean {
+    private fun present(
+        activity: Activity,
+        dialog: AlertDialog,
+        onDismiss: ((answered: Boolean) -> Unit)? = null,
+    ): Boolean {
         if (!alive(activity)) return false
 
         val app = activity.application
+        var lost = false
         val watch = object : Application.ActivityLifecycleCallbacks {
             override fun onActivityDestroyed(destroyed: Activity) {
                 // Before the framework closes the windows, so this is an ordinary dismiss.
-                if (destroyed === activity) dialog.dismiss()
+                if (destroyed === activity) {
+                    lost = true
+                    dialog.dismiss()
+                }
             }
 
             override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = Unit
@@ -69,7 +79,7 @@ internal object UpdaterDialog {
         app.registerActivityLifecycleCallbacks(watch)
         dialog.setOnDismissListener {
             app.unregisterActivityLifecycleCallbacks(watch)
-            onDismiss?.invoke()
+            onDismiss?.invoke(!lost)
         }
 
         val window = dialog.window
@@ -207,8 +217,10 @@ internal object UpdaterDialog {
      *
      * [onClosed] runs when the dialog goes away by any road but Update — Later,
      * Cancel, a tap outside — and is how the caller learns the operation is over;
-     * after Update it is [onUpdate] that carries the operation on. Returns false,
-     * calling nothing, when there was no activity to show it on.
+     * after Update it is [onUpdate] that carries the operation on. Its flag is
+     * false when the activity was destroyed under the dialog: nobody answered,
+     * and the caller decides whether that check counted. Returns false, calling
+     * nothing, when there was no activity to show it on.
      */
     fun confirm(
         activity: Activity,
@@ -216,7 +228,7 @@ internal object UpdaterDialog {
         info: UpdateInfo,
         onUpdate: () -> Unit,
         onCancel: () -> Unit,
-        onClosed: () -> Unit,
+        onClosed: (answered: Boolean) -> Unit,
     ): Boolean {
         val ui = Ui(activity)
         val content = ui.content()
@@ -239,7 +251,7 @@ internal object UpdaterDialog {
         )
         // Dismissal is delivered later on the main looper, not inside dismiss(), so
         // this is the one place that sees every way out of the dialog at once.
-        return present(activity, dialog) { if (!updating) onClosed() }
+        return present(activity, dialog) { answered -> if (!updating) onClosed(answered) }
     }
 
     fun message(activity: Activity, text: String) {
@@ -278,7 +290,7 @@ internal object UpdaterDialog {
                 ui.pill(strings.cancel) { dialog.dismiss() },
             )
         )
-        return present(activity, dialog, onClosed)
+        return present(activity, dialog) { onClosed() }
     }
 
     /**

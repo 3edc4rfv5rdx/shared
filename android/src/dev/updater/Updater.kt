@@ -161,6 +161,9 @@ object Updater {
                     }
                 }
 
+                // The check counts from here on: the server answered, and every road
+                // below either has nothing to show or shows the offer. The one
+                // exception is an offer nobody saw — see the confirm dialog below.
                 prefs.lastCheckAt = System.currentTimeMillis()
 
                 // A manifest for another app means the config points at the wrong
@@ -185,15 +188,24 @@ object Updater {
                     return@post
                 }
 
+                // An offer the user never saw must not spend the interval: an activity
+                // gone before the dialog was up, or destroyed under it, gives the check
+                // back its turn, so the next start-up looks again instead of six hours on.
                 val shown = UpdaterDialog.confirm(
                     activity = activity,
                     strings = strings,
                     info = info,
                     onUpdate = { startDownload(activity, config, strings, info) },
                     onCancel = { prefs.declinedVersionCode = info.versionCode },
-                    onClosed = { running.set(false) },
+                    onClosed = { answered ->
+                        if (!answered) prefs.lastCheckAt = 0L
+                        running.set(false)
+                    },
                 )
-                if (!shown) running.set(false)
+                if (!shown) {
+                    prefs.lastCheckAt = 0L
+                    running.set(false)
+                }
             }
         }.start()
     }
