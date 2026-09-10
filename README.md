@@ -116,6 +116,6 @@ forced — a consent dialog has no business appearing behind a silent backup.
 | --- | --- | --- |
 | ReminderLists | db + photos + sounds + logs | wired in |
 | BikeTracker | db (rides, track points) | wired in |
-| Steps | db (day history) | has `exportZip()`, not wired in yet |
+| Steps | db (day history) | wired in |
 | myplayer | settings + duration cache | no local archive yet |
 | bikelog | Flutter, sqflite + photos | needs a Dart counterpart; its backup is written in Dart |
