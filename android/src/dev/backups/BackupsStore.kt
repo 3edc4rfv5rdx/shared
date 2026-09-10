@@ -80,8 +80,14 @@ internal object BackupsStore {
      * An archive left pending by a killed process is neither counted nor
      * deleted here: a pending item is invisible to a plain query, even to the
      * app that created it, and the platform drops it after seven days.
+     *
+     * [published] is the copy this run just made. It holds one of the kept
+     * slots whatever the ordering says: the order is by DATE_ADDED, which is
+     * the wall clock, and a clock moved back since the last copies were made
+     * would sort the newest one under them and delete it in the same breath.
      */
-    fun prune(context: Context, config: BackupsConfig): Int {
+    fun prune(context: Context, config: BackupsConfig, published: Uri): Int {
+        val publishedId = runCatching { ContentUris.parseId(published) }.getOrNull()
         val resolver = context.contentResolver
         // The LIKE is a coarse prefilter and nothing more: SQL LIKE is case-insensitive and
         // its wildcard takes anything, so the pool is decided per row by isPoolName below.
@@ -108,12 +114,17 @@ internal object BackupsStore {
             )?.use { cursor ->
                 val idColumn = cursor.getColumnIndexOrThrow(BaseColumns._ID)
                 val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DISPLAY_NAME)
-                var kept = 0
+                // The new copy's slot is taken before the walk, so it is kept wherever the
+                // ordering puts it — and if the query somehow does not return it, one old copy
+                // fewer survives rather than one too many.
+                var kept = if (publishedId != null) 1 else 0
                 while (cursor.moveToNext()) {
+                    val id = cursor.getLong(idColumn)
+                    if (id == publishedId) continue
                     // A name of another shape was put here by the user, or by an app sharing
                     // the folder: neither counted against keepCount nor ever deleted.
                     if (!config.isPoolName(cursor.getString(nameColumn).orEmpty())) continue
-                    if (kept < config.keepCount) kept++ else doomed += cursor.getLong(idColumn)
+                    if (kept < config.keepCount) kept++ else doomed += id
                 }
             }
         } catch (e: Exception) {

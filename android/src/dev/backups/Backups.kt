@@ -165,7 +165,7 @@ object Backups {
         val publishedName = checkNotNull(written) { "Backup was not published" }
 
         prefs.lastRunAt = now
-        BackupsStore.prune(context, config)
+        BackupsStore.prune(context, config, published = uri)
         publishedName
     }
 
