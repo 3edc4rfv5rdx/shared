@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+- E: A check or download whose thread died no longer leaves every later check silent or the progress dialog up for good
 - F: The pills keep their 2dp outline, in the accent colour now, so a tinted button is the same shape as a filled one instead of a lighter blob on the card
 - F: One palette for both modules in UpdaterColors — violet buttons and progress bar on the same white card, and ../about draws from the same file instead of its own copy of the colours
 - N: An on/off flag of the module's own, Updater.isEnabled/setEnabled, so every app can offer "check at launch" as a settings switch instead of keeping that preference itself; it stops the start-up check alone, never the button
