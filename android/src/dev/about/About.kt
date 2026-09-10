@@ -51,6 +51,14 @@ object About {
             } else {
                 null
             },
+            // Asked as the card comes up, so the button can say whether there is
+            // anything to update to instead of promising it. The tap still goes
+            // through checkNow: this look decides nothing and installs nothing.
+            onProbe = if (config.offerUpdate) {
+                { answer -> Updater.peek(activity, config.updater, answer) }
+            } else {
+                null
+            },
         )
     }
 

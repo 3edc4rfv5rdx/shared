@@ -14,6 +14,7 @@ internal class AboutStrings private constructor(
     val version: String,
     val buildDate: String,
     val update: String,
+    val checkUpdate: String,
     val close: String,
 ) {
     companion object {
@@ -22,6 +23,7 @@ internal class AboutStrings private constructor(
                 version = "Версия",
                 buildDate = "Дата сборки",
                 update = "Обновить",
+                checkUpdate = "Проверить обновление",
                 close = "Закрыть",
             )
 
@@ -29,6 +31,7 @@ internal class AboutStrings private constructor(
                 version = "Версія",
                 buildDate = "Дата збірки",
                 update = "Оновити",
+                checkUpdate = "Перевірити оновлення",
                 close = "Закрити",
             )
 
@@ -36,6 +39,7 @@ internal class AboutStrings private constructor(
                 version = "Version",
                 buildDate = "Build date",
                 update = "Update",
+                checkUpdate = "Check for updates",
                 close = "Close",
             )
         }

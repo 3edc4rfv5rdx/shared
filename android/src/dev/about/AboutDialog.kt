@@ -138,22 +138,31 @@ internal object AboutDialog {
          * ever be tall, so the ends stay semicircular whatever the text does to
          * the height.
          */
-        fun pill(label: String, inverted: Boolean = false, onClick: () -> Unit): TextView =
+        fun pill(label: String, onClick: () -> Unit): TextView =
             TextView(activity).apply {
-                text = label
                 gravity = Gravity.CENTER
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
-                setTextColor(if (inverted) cardFill else textColor)
                 setPadding(dp(14), dp(13), dp(14), dp(13))
                 isClickable = true
-                background = GradientDrawable().apply {
-                    shape = GradientDrawable.RECTANGLE
-                    cornerRadius = dp(100).toFloat()
-                    setColor(if (inverted) textColor else pillFill)
-                    setStroke(dp(1), pillStroke)
-                }
+                style(this, label, inverted = false)
                 setOnClickListener { onClick() }
             }
+
+        /**
+         * What a pill says and how it is filled, in one place: the update button
+         * is drawn once before the server has been asked and again with the
+         * answer, and the two have to agree on everything but the two colours.
+         */
+        fun style(pill: TextView, label: String, inverted: Boolean) {
+            pill.text = label
+            pill.setTextColor(if (inverted) cardFill else textColor)
+            pill.background = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dp(100).toFloat()
+                setColor(if (inverted) textColor else pillFill)
+                setStroke(dp(1), pillStroke)
+            }
+        }
 
         /** The pills stacked, each across the full width. */
         fun buttons(vararg pills: View): LinearLayout = LinearLayout(activity).apply {
@@ -197,6 +206,11 @@ internal object AboutDialog {
      *
      * [onUpdate] is null when the app publishes no releases, and then the button
      * is simply not there — a check that cannot answer is worse than none.
+     *
+     * [onProbe] is that same app's silent look at the server, asked as the dialog
+     * opens. Until it answers, and forever if it answers no, the button offers a
+     * check; a yes turns it into the offer itself. It is only consulted when
+     * there is a button to draw, and the two are given together.
      */
     fun show(
         activity: Activity,
@@ -209,6 +223,7 @@ internal object AboutDialog {
         onOpen: (String) -> Unit,
         onMail: (String) -> Unit,
         onUpdate: (() -> Unit)?,
+        onProbe: (((Boolean) -> Unit) -> Unit)? = null,
     ) {
         if (!alive(activity)) return
         val ui = Ui(activity)
@@ -232,7 +247,13 @@ internal object AboutDialog {
         val dialog = AlertDialog.Builder(activity).setView(content).create()
         val pills = mutableListOf<View>()
         if (onUpdate != null) {
-            pills.add(ui.pill(strings.update, inverted = true) { dialog.dismiss(); onUpdate() })
+            val update = ui.pill(strings.checkUpdate) { dialog.dismiss(); onUpdate() }
+            pills.add(update)
+            // The answer lands while the dialog is up, on the main thread. A card
+            // already dismissed by then simply keeps a view nobody is looking at.
+            onProbe?.invoke { newer ->
+                if (newer) ui.style(update, strings.update, inverted = true)
+            }
         }
         pills.add(ui.pill(strings.close) { dialog.dismiss() })
         content.addView(ui.buttons(*pills.toTypedArray()))

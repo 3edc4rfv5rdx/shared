@@ -31,8 +31,9 @@ android {
 ```
 
 `../updater` has to be on that list too: About reads the repository address out
-of `UpdaterConfig` and calls `Updater.checkNow` for its button. Every project
-here already compiles it in.
+of `UpdaterConfig`, asks `Updater.peek` as the card comes up and calls
+`Updater.checkNow` when the button is tapped. Every project here already
+compiles it in.
 
 No `res` set and no manifest entries: the module has no resources, no strings of
 its own in `res/values-*` — they are in `AboutStrings.kt`, so a release build
@@ -67,8 +68,10 @@ AboutConfig(
 ```
 
 `description` puts a sentence above the facts, for an app whose name does not
-say what it is. `offerUpdate = false` drops the Update button, for an app whose
-builds are not published as releases. `email` is a default — the same mailbox in every app —
+say what it is. The update button opens as "Check for updates" on white and
+becomes an inverted "Update" only once the server has confirmed there is a newer
+build, so it never promises one that is not there. `offerUpdate = false` drops it
+altogether, for an app whose builds are not published as releases. `email` is a default — the same mailbox in every app —
 and is there to be overridden, not to be repeated.
 
 ## What it puts on screen
