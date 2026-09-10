@@ -188,10 +188,17 @@ object Updater {
         // Asked before the download rather than after it, so a missing permission
         // costs a tap instead of a finished transfer that goes nowhere.
         if (!UpdaterInstall.canInstall(activity)) {
-            pendingInfo = info
-            pendingConfig = config
-            watchForPermission(activity.application)
-            UpdaterDialog.installSources(activity, strings)
+            // The install is remembered only once the user is actually on their way to
+            // Settings. Armed any earlier, a Cancel here would leave it waiting for the
+            // next resume of any screen, and a permission granted by other means later
+            // would start a download nobody had just asked for.
+            UpdaterDialog.installSources(activity, strings) {
+                if (UpdaterInstall.openInstallSourcesSettings(activity)) {
+                    pendingInfo = info
+                    pendingConfig = config
+                    watchForPermission(activity.application)
+                }
+            }
             return
         }
 

@@ -210,7 +210,12 @@ internal object UpdaterDialog {
         present(dialog)
     }
 
-    fun installSources(activity: Activity, strings: UpdaterStrings) {
+    /**
+     * The permission ask. [onOpenSettings] runs on the Settings pill and is where the
+     * caller both sends the user there and decides what to remember; Cancel remembers
+     * nothing, so nothing is armed for a user who declined.
+     */
+    fun installSources(activity: Activity, strings: UpdaterStrings, onOpenSettings: () -> Unit) {
         if (!alive(activity)) return
         val ui = Ui(activity)
         val content = ui.content()
@@ -220,10 +225,7 @@ internal object UpdaterDialog {
         val dialog = AlertDialog.Builder(activity).setView(content).create()
         content.addView(
             ui.buttons(
-                ui.pill(strings.openSettings) {
-                    dialog.dismiss()
-                    UpdaterInstall.openInstallSourcesSettings(activity)
-                },
+                ui.pill(strings.openSettings) { dialog.dismiss(); onOpenSettings() },
                 ui.pill(strings.cancel) { dialog.dismiss() },
             )
         )

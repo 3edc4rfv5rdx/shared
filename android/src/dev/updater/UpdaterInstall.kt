@@ -32,20 +32,29 @@ internal object UpdaterInstall {
     fun canInstall(context: Context): Boolean =
         Build.VERSION.SDK_INT < Build.VERSION_CODES.O || context.packageManager.canRequestPackageInstalls()
 
-    fun openInstallSourcesSettings(activity: Activity) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+    /**
+     * Sends the user to the screen where the permission is granted. True when a
+     * Settings screen was actually started — the one case the caller should wait
+     * for a resume; false when no screen took the intent, in which case nothing is
+     * coming back to wait for.
+     */
+    fun openInstallSourcesSettings(activity: Activity): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
         val intent = Intent(
             Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
             Uri.parse("package:${activity.packageName}"),
         )
-        try {
+        return try {
             activity.startActivity(intent)
+            true
         } catch (e: Exception) {
             // Some ROMs ship without that screen; the generic security page is
             // the closest thing to it and is better than dropping the tap.
             try {
                 activity.startActivity(Intent(Settings.ACTION_SECURITY_SETTINGS))
+                true
             } catch (ignored: Exception) {
+                false
             }
         }
     }
