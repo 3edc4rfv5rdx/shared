@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+- E: The start-up check runs again after the phone clock has been moved back, instead of waiting for it to catch up
 - E: Cancel on the permission dialog forgets the install instead of starting it on the next screen the user comes back to
 - E: A check or download whose thread died no longer leaves every later check silent or the progress dialog up for good
 - F: The pills keep their 2dp outline, in the accent colour now, so a tinted button is the same shape as a filled one instead of a lighter blob on the card
