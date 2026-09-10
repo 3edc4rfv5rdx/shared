@@ -318,7 +318,7 @@ callable after the pill is on screen.
 
 ---
 
-### 10. P3 — A `BackupsConfig` whose extension does not match its MIME type is accepted, and its copies never rotate
+### 10. P3 [FIXED 76e71d6] — A `BackupsConfig` whose extension does not match its MIME type is accepted, and its copies never rotate
 
 **Affected components:** `BackupsConfig.init` (lines 45-50: no check that `extension`
 belongs to `mimeType`), `BackupsStore.createPending`, `prune`.
