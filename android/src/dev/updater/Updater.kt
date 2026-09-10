@@ -120,7 +120,14 @@ object Updater {
         val abis = Build.SUPPORTED_ABIS.toList()
 
         Thread {
-            val result = fetch(manifestUrl, abis)
+            // Whatever the worker dies of, the answer still reaches the main thread: a
+            // throwable that escaped here would leave `running` set for the life of the
+            // process, and every later check — the About button included — silent.
+            val result = try {
+                fetch(manifestUrl, abis)
+            } catch (e: Throwable) {
+                null
+            }
 
             main.post {
                 running.set(false)
@@ -200,22 +207,28 @@ object Updater {
 
         Thread {
             var lastPercent = -1
-            val actual = UpdaterNet.download(
-                url = info.url,
-                target = target,
-                expectedSize = info.size,
-                isCancelled = { progress.cancelled },
-                onProgress = { downloaded, total ->
-                    if (total > 0L) {
-                        val percent = ((downloaded * 100L) / total).toInt()
-                        // One post per percent, not one per 64 KB block.
-                        if (percent != lastPercent) {
-                            lastPercent = percent
-                            main.post { progress.update(downloaded, total) }
+            // Same rule as the check: the progress dialog cannot be cancelled by the user,
+            // so a worker that died without posting would leave it up for good.
+            val actual = try {
+                UpdaterNet.download(
+                    url = info.url,
+                    target = target,
+                    expectedSize = info.size,
+                    isCancelled = { progress.cancelled },
+                    onProgress = { downloaded, total ->
+                        if (total > 0L) {
+                            val percent = ((downloaded * 100L) / total).toInt()
+                            // One post per percent, not one per 64 KB block.
+                            if (percent != lastPercent) {
+                                lastPercent = percent
+                                main.post { progress.update(downloaded, total) }
+                            }
                         }
-                    }
-                },
-            )
+                    },
+                )
+            } catch (e: Throwable) {
+                null
+            }
 
             main.post {
                 progress.dismiss()
