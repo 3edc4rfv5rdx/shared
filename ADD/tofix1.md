@@ -47,7 +47,7 @@ worker decides `isDue`, `perform` = create pending → app's `write` → publish
 
 ---
 
-### 1. P2 — A second download can start while one is in flight; the cache sweep deletes the file being written and the installer gets the wrong file
+### 1. P2 [FIXED fa2b79d] — A second download can start while one is in flight; the cache sweep deletes the file being written and the installer gets the wrong file
 
 **Affected components:** `updater/android/src/dev/updater/Updater.kt` — `check`
 (`running.set(false)` at line 126, before any dialog), `startDownload` (lines 191-197:
