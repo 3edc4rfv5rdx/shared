@@ -89,9 +89,11 @@ initialised.
   refused outright.
 - **Rotation runs after a successful copy, never before.** A backup that failed
   must not have cost the oldest one that worked.
-- **Only the app's own files are touched.** `filePrefix` + `extension` is the
-  definition of the pool: `backup_*.zip` in `Documents/ReminderLists`. Whatever
-  else the user keeps in that folder stays there.
+- **Only the app's own files are touched.** The pool is exactly what the module
+  writes — `filePrefix`, a `yyyyMMdd-HHmmss` timestamp, the ` (n)` MediaStore adds
+  to a taken name, `extension` — matched case-sensitively in code, not by a SQL
+  pattern. `backup_20260904-091200.zip` rotates; `Backup_notes.ZIP` or
+  `backup_old.zip` in the same folder is never counted and never deleted.
 
 ## Settings
 
