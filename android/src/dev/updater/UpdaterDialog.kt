@@ -2,12 +2,14 @@ package dev.updater
 
 import android.app.Activity
 import android.app.AlertDialog
+import android.app.Application
 import android.graphics.Color
 import android.graphics.drawable.ClipDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.LayerDrawable
 import android.os.Build
+import android.os.Bundle
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -36,8 +38,40 @@ internal object UpdaterDialog {
      * Shows a dialog whose content already carries its own card: the window's own
      * background would otherwise sit behind it as a second, differently coloured
      * panel with square corners showing past the rounded ones.
+     *
+     * False when the activity is no longer there to hold it and nothing was
+     * shown — the caller waiting on the dialog's answer has to know that no
+     * answer is coming.
+     *
+     * [onDismiss] is the one dismiss listener the dialog gets, and it fires
+     * however the dialog goes: a pill, a tap outside, Back — or the activity
+     * being destroyed under it, which the framework does without a word to the
+     * dialog. The activity is watched for that and the dialog dismissed by hand,
+     * so an operation waiting on the answer is never left waiting for good.
      */
-    private fun present(dialog: AlertDialog) {
+    private fun present(activity: Activity, dialog: AlertDialog, onDismiss: (() -> Unit)? = null): Boolean {
+        if (!alive(activity)) return false
+
+        val app = activity.application
+        val watch = object : Application.ActivityLifecycleCallbacks {
+            override fun onActivityDestroyed(destroyed: Activity) {
+                // Before the framework closes the windows, so this is an ordinary dismiss.
+                if (destroyed === activity) dialog.dismiss()
+            }
+
+            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = Unit
+            override fun onActivityStarted(activity: Activity) = Unit
+            override fun onActivityResumed(activity: Activity) = Unit
+            override fun onActivityPaused(activity: Activity) = Unit
+            override fun onActivityStopped(activity: Activity) = Unit
+            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
+        }
+        app.registerActivityLifecycleCallbacks(watch)
+        dialog.setOnDismissListener {
+            app.unregisterActivityLifecycleCallbacks(watch)
+            onDismiss?.invoke()
+        }
+
         val window = dialog.window
         window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
         // Centred on purpose: a host on the platform's own DeviceDefault theme
@@ -51,6 +85,7 @@ internal object UpdaterDialog {
             window?.decorView?.isForceDarkAllowed = false
         }
         dialog.show()
+        return true
     }
 
     /**
@@ -169,6 +204,11 @@ internal object UpdaterDialog {
      * Update downloads; Cancel puts this exact build aside and stops offering it,
      * while a newer one still gets through; Later remembers nothing, so the next
      * check after the interval puts the same version up again.
+     *
+     * [onClosed] runs when the dialog goes away by any road but Update — Later,
+     * Cancel, a tap outside — and is how the caller learns the operation is over;
+     * after Update it is [onUpdate] that carries the operation on. Returns false,
+     * calling nothing, when there was no activity to show it on.
      */
     fun confirm(
         activity: Activity,
@@ -176,8 +216,8 @@ internal object UpdaterDialog {
         info: UpdateInfo,
         onUpdate: () -> Unit,
         onCancel: () -> Unit,
-    ) {
-        if (!alive(activity)) return
+        onClosed: () -> Unit,
+    ): Boolean {
         val ui = Ui(activity)
         val content = ui.content()
         content.addView(ui.title(strings.title))
@@ -189,34 +229,43 @@ internal object UpdaterDialog {
         )
 
         val dialog = AlertDialog.Builder(activity).setView(content).create()
+        var updating = false
         content.addView(
             ui.buttons(
-                ui.pill(strings.update, inverted = true) { dialog.dismiss(); onUpdate() },
+                ui.pill(strings.update, inverted = true) { updating = true; dialog.dismiss(); onUpdate() },
                 ui.pill(strings.cancel) { dialog.dismiss(); onCancel() },
                 ui.pill(strings.later) { dialog.dismiss() },
             )
         )
-        present(dialog)
+        // Dismissal is delivered later on the main looper, not inside dismiss(), so
+        // this is the one place that sees every way out of the dialog at once.
+        return present(activity, dialog) { if (!updating) onClosed() }
     }
 
     fun message(activity: Activity, text: String) {
-        if (!alive(activity)) return
         val ui = Ui(activity)
         val content = ui.content()
         content.addView(ui.body(text))
 
         val dialog = AlertDialog.Builder(activity).setView(content).create()
         content.addView(ui.buttons(ui.pill(activity.getString(android.R.string.ok)) { dialog.dismiss() }))
-        present(dialog)
+        present(activity, dialog)
     }
 
     /**
      * The permission ask. [onOpenSettings] runs on the Settings pill and is where the
      * caller both sends the user there and decides what to remember; Cancel remembers
-     * nothing, so nothing is armed for a user who declined.
+     * nothing, so nothing is armed for a user who declined. [onClosed] runs once the
+     * dialog is gone whichever pill it was — the operation on screen is over either way,
+     * and a resume from Settings starts a new one. Returns false, calling nothing, when
+     * there was no activity to show it on.
      */
-    fun installSources(activity: Activity, strings: UpdaterStrings, onOpenSettings: () -> Unit) {
-        if (!alive(activity)) return
+    fun installSources(
+        activity: Activity,
+        strings: UpdaterStrings,
+        onOpenSettings: () -> Unit,
+        onClosed: () -> Unit,
+    ): Boolean {
         val ui = Ui(activity)
         val content = ui.content()
         content.addView(ui.title(strings.installSourcesTitle))
@@ -229,7 +278,7 @@ internal object UpdaterDialog {
                 ui.pill(strings.cancel) { dialog.dismiss() },
             )
         )
-        present(dialog)
+        return present(activity, dialog, onClosed)
     }
 
     /**
@@ -238,7 +287,7 @@ internal object UpdaterDialog {
      * stop a download that is going nowhere.
      */
     class Progress(
-        activity: Activity,
+        private val activity: Activity,
         private val strings: UpdaterStrings,
     ) {
         @Volatile
@@ -272,9 +321,8 @@ internal object UpdaterDialog {
             content.addView(ui.buttons(ui.pill(strings.cancel) { cancelled = true }))
         }
 
-        fun show() {
-            present(dialog)
-        }
+        /** False when there is no activity to show it on, and no download should start. */
+        fun show(): Boolean = present(activity, dialog)
 
         /** Called from the main thread as bytes arrive. */
         fun update(downloaded: Long, total: Long) {

@@ -21,6 +21,12 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 object Updater {
 
+    /**
+     * Held for the whole of one operation on screen — the fetch, the dialog it
+     * ends in, and the download and install hand-off after Update — not for the
+     * fetch alone. Released on every road out, and only on the main thread.
+     * [peek] never takes it: a look that shows nothing has nothing to collide with.
+     */
     private val running = AtomicBoolean(false)
     private val main = Handler(Looper.getMainLooper())
 
@@ -133,8 +139,9 @@ object Updater {
             }
 
             main.post {
-                running.set(false)
-
+                // `running` is held until the operation is over on screen: a message
+                // is over as soon as it is up, the confirm dialog when it is closed
+                // by anything but Update, and after Update the download carries it.
                 val info = when (result) {
                     is ManifestResult.Ok -> result.info
 
@@ -143,11 +150,13 @@ object Updater {
                     is ManifestResult.NoBuildForDevice -> {
                         prefs.lastCheckAt = System.currentTimeMillis()
                         if (manual) UpdaterDialog.message(activity, strings.errorNoBuild)
+                        running.set(false)
                         return@post
                     }
 
                     null, is ManifestResult.Invalid -> {
                         if (manual) UpdaterDialog.message(activity, strings.errorNetwork)
+                        running.set(false)
                         return@post
                     }
                 }
@@ -161,27 +170,40 @@ object Updater {
                 // ".debug", which no published manifest names.
                 if (info.packageName != activity.packageName) {
                     if (manual) UpdaterDialog.message(activity, strings.errorNetwork)
+                    running.set(false)
                     return@post
                 }
 
                 if (info.versionCode <= currentCode) {
                     if (manual) UpdaterDialog.message(activity, strings.upToDate)
+                    running.set(false)
                     return@post
                 }
 
-                if (!manual && info.versionCode == prefs.declinedVersionCode) return@post
+                if (!manual && info.versionCode == prefs.declinedVersionCode) {
+                    running.set(false)
+                    return@post
+                }
 
-                UpdaterDialog.confirm(
+                val shown = UpdaterDialog.confirm(
                     activity = activity,
                     strings = strings,
                     info = info,
                     onUpdate = { startDownload(activity, config, strings, info) },
                     onCancel = { prefs.declinedVersionCode = info.versionCode },
+                    onClosed = { running.set(false) },
                 )
+                if (!shown) running.set(false)
             }
         }.start()
     }
 
+    /**
+     * The download, with [running] already held by the caller — the confirm dialog
+     * hands it over on Update, the permission watch takes it before calling. It is
+     * released here on every road out: the permission dialog closing, a cancelled
+     * or failed transfer, the file handed to the installer.
+     */
     private fun startDownload(
         activity: Activity,
         config: UpdaterConfig,
@@ -195,25 +217,40 @@ object Updater {
             // Settings. Armed any earlier, a Cancel here would leave it waiting for the
             // next resume of any screen, and a permission granted by other means later
             // would start a download nobody had just asked for.
-            UpdaterDialog.installSources(activity, strings) {
-                if (UpdaterInstall.openInstallSourcesSettings(activity)) {
-                    pendingInfo = info
-                    pendingConfig = config
-                    watchForPermission(activity.application)
-                }
-            }
+            val shown = UpdaterDialog.installSources(
+                activity = activity,
+                strings = strings,
+                onOpenSettings = {
+                    if (UpdaterInstall.openInstallSourcesSettings(activity)) {
+                        pendingInfo = info
+                        pendingConfig = config
+                        watchForPermission(activity.application)
+                    }
+                },
+                onClosed = { running.set(false) },
+            )
+            if (!shown) running.set(false)
+            return
+        }
+
+        val progress = UpdaterDialog.Progress(activity, strings)
+        if (!progress.show()) {
+            running.set(false)
             return
         }
 
         val dir = File(activity.cacheDir, "updater")
         dir.mkdirs()
         // Whatever a previous run left here is either the build now installed or
-        // one abandoned half-way; neither is worth the space.
+        // one abandoned half-way; neither is worth the space. Nothing here is in
+        // flight: `running` has been held since before the confirm dialog.
         dir.listFiles()?.forEach { it.delete() }
 
+        // Written under a name the installer is never given; it becomes the .apk
+        // only once its digest has been checked, so a file called .apk in this
+        // folder is a file that was verified, and a killed download leaves a .part.
         val target = File(dir, "${config.appKey}-${info.versionCode}.apk")
-        val progress = UpdaterDialog.Progress(activity, strings)
-        progress.show()
+        val part = File(dir, "${target.name}.part")
 
         Thread {
             var lastPercent = -1
@@ -222,7 +259,7 @@ object Updater {
             val actual = try {
                 UpdaterNet.download(
                     url = info.url,
-                    target = target,
+                    target = part,
                     expectedSize = info.size,
                     isCancelled = { progress.cancelled },
                     onProgress = { downloaded, total ->
@@ -242,30 +279,49 @@ object Updater {
 
             main.post {
                 progress.dismiss()
-
-                if (progress.cancelled) {
-                    target.delete()
-                    return@post
-                }
-
-                if (actual == null) {
-                    target.delete()
-                    UpdaterDialog.message(activity, strings.errorNetwork)
-                    return@post
-                }
-
-                // The APK's own signature is what actually protects the install —
-                // Android refuses a package signed with another key. This checks
-                // the file arrived whole, which a truncated transfer would not.
-                if (!actual.equals(info.sha256, ignoreCase = true)) {
-                    target.delete()
-                    UpdaterDialog.message(activity, strings.errorCorrupt)
-                    return@post
-                }
-
-                UpdaterInstall.install(activity, target)
+                finishDownload(activity, strings, info, part, target, actual, progress.cancelled)
+                running.set(false)
             }
         }.start()
+    }
+
+    /** What happens to the transferred bytes: thrown away, or renamed and installed. */
+    private fun finishDownload(
+        activity: Activity,
+        strings: UpdaterStrings,
+        info: UpdateInfo,
+        part: File,
+        target: File,
+        actual: String?,
+        cancelled: Boolean,
+    ) {
+        if (cancelled) {
+            part.delete()
+            return
+        }
+
+        if (actual == null) {
+            part.delete()
+            UpdaterDialog.message(activity, strings.errorNetwork)
+            return
+        }
+
+        // The APK's own signature is what actually protects the install —
+        // Android refuses a package signed with another key. This checks
+        // the file arrived whole, which a truncated transfer would not.
+        if (!actual.equals(info.sha256, ignoreCase = true)) {
+            part.delete()
+            UpdaterDialog.message(activity, strings.errorCorrupt)
+            return
+        }
+
+        if (!part.renameTo(target)) {
+            part.delete()
+            UpdaterDialog.message(activity, strings.errorNetwork)
+            return
+        }
+
+        UpdaterInstall.install(activity, target)
     }
 
     /**
@@ -289,7 +345,10 @@ object Updater {
                 pendingInfo = null
                 pendingConfig = null
 
-                if (UpdaterInstall.canInstall(activity)) {
+                // A new operation, so it takes `running` like a check would; one already
+                // in flight — a start-up check of the screen just resumed — wins, and
+                // that check offers the same build again.
+                if (UpdaterInstall.canInstall(activity) && running.compareAndSet(false, true)) {
                     startDownload(activity, config, UpdaterStrings.of(Locale.getDefault()), info)
                 }
             }
