@@ -41,8 +41,11 @@ object Updater {
     fun checkOnStart(activity: Activity, config: UpdaterConfig) {
         val prefs = UpdaterPrefs(activity)
         if (!prefs.enabled) return
+        // A clock moved backwards gives a negative interval: that is not "checked
+        // recently", it is an unusable timestamp, and the check goes ahead — the
+        // same rule ../backups applies to its own retry interval.
         val elapsed = System.currentTimeMillis() - prefs.lastCheckAt
-        if (elapsed < config.checkIntervalHours * 3_600_000L) return
+        if (elapsed in 0 until config.checkIntervalHours * 3_600_000L) return
         check(activity, config, manual = false)
     }
 
