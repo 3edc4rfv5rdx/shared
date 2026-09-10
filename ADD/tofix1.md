@@ -191,7 +191,7 @@ build. `peek` still remembers nothing.
 
 ---
 
-### 5. P3 — The Cancel pill on the permission dialog leaves a pending install armed
+### 5. P3 [FIXED b29c184] — The Cancel pill on the permission dialog leaves a pending install armed
 
 **Affected components:** `Updater.startDownload` (lines 183-189: `pendingInfo`,
 `pendingConfig`, `watchForPermission`), `UpdaterDialog.installSources` (line 227: Cancel
