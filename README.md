@@ -55,12 +55,16 @@ never twice at once.
 Backups.checkOnStart(this, BackupManager.backupsConfig(this))
 ```
 
-In the launcher activity's `onCreate`, and in `onCreate` of any service that
-records data while the app is closed — Steps and BikeTracker write step counts
-and track points with no UI open, and a start-up-only check would leave those
-days without a copy. The call reads nothing on the calling thread — it hands the
-decision to one short-lived worker and returns — so putting it in both places
-costs nothing.
+In the launcher activity's `onCreate`, and again wherever a service records data
+while the app is closed — Steps and BikeTracker write step counts and track
+points with no UI open, and a start-up-only check would leave those days without
+a copy. The call reads nothing on the calling thread — it hands the decision to
+one short-lived worker and returns — so putting it in both places costs nothing.
+
+`onCreate` is the usual second place. An app that gates its database against a
+recording in progress wants the end of that recording instead: BikeTracker calls
+it where a ride is finished and saved, because a copy started as the ride begins
+would be holding the database at the moment the ride asks for it.
 
 Not from a `BroadcastReceiver`: a receiver has about ten seconds before the
 process may be killed, and a killed process in the middle of a write is exactly
@@ -111,7 +115,7 @@ forced — a consent dialog has no business appearing behind a silent backup.
 | project | archive | state |
 | --- | --- | --- |
 | ReminderLists | db + photos + sounds + logs | wired in |
-| BikeTracker | db (rides, track points) | has `backupDatabase()`, not wired in yet |
+| BikeTracker | db (rides, track points) | wired in |
 | Steps | db (day history) | has `exportZip()`, not wired in yet |
 | myplayer | settings + duration cache | no local archive yet |
 | bikelog | Flutter, sqflite + photos | needs a Dart counterpart; its backup is written in Dart |
