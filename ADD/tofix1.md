@@ -220,7 +220,7 @@ starts no download.
 
 ---
 
-### 6. P3 — Two modules answer "attempted recently?" by different rules on a clock that moved back
+### 6. P3 [FIXED 7f831c7] — Two modules answer "attempted recently?" by different rules on a clock that moved back
 
 **Affected components:** `Updater.checkOnStart` line 44-45
 (`elapsed < interval` with `elapsed` possibly negative); `Backups.isDue` line 95
