@@ -92,7 +92,7 @@ the path it wrote and verified, even after another download was requested.
 
 ---
 
-### 2. P2 — Rotation can delete the copy it just published
+### 2. P2 [FIXED e5f3e7f] — Rotation can delete the copy it just published
 
 **Affected components:** `backups/android/src/dev/backups/BackupsStore.kt` — `prune`
 (lines 95-112: keeps the first `keepCount` rows of `DATE_ADDED DESC, _ID DESC`, dooms the
