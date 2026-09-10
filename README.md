@@ -87,7 +87,7 @@ initialised.
 - **The archive is written pending and published only when finished**, so a
   half-written file is never visible and never counts as a copy. An empty one is
   refused outright.
-- **Rotation runs after a successful copy, never before.** A backup that failed
+- **Rotation runs after a successful copy, never before, and never on that copy.** A backup that failed
   must not have cost the oldest one that worked.
 - **Only the app's own files are touched.** The pool is exactly what the module
   writes — `filePrefix`, a `yyyyMMdd-HHmmss` timestamp, the ` (n)` MediaStore adds
