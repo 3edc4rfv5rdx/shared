@@ -159,7 +159,7 @@ false.
 
 ---
 
-### 4. P2 — A start-up check whose answer lands on a dead activity is counted as done; the offer is lost for six hours
+### 4. P2 [FIXED d0c6300] — A start-up check whose answer lands on a dead activity is counted as done; the offer is lost for six hours
 
 **Affected components:** `Updater.check` (line 145: `prefs.lastCheckAt = now` before
 `UpdaterDialog.confirm`, which silently returns when `!alive(activity)` at line 180);
