@@ -270,7 +270,7 @@ pending and published only when finished".
 
 ---
 
-### 8. P3 — A check worker that dies leaves the updater dead for the rest of the process
+### 8. P3 [FIXED dfec151] — A check worker that dies leaves the updater dead for the rest of the process
 
 **Affected components:** `Updater.check` lines 122-172: `running` is only reset inside
 `main.post`, with no `try/finally` on the worker thread.
