@@ -45,13 +45,9 @@ object Updater {
      * has turned it off — see [setEnabled].
      */
     fun checkOnStart(activity: Activity, config: UpdaterConfig) {
-        val prefs = UpdaterPrefs(activity)
-        if (!prefs.enabled) return
-        // A clock moved backwards gives a negative interval: that is not "checked
-        // recently", it is an unusable timestamp, and the check goes ahead — the
-        // same rule ../backups applies to its own retry interval.
-        val elapsed = System.currentTimeMillis() - prefs.lastCheckAt
-        if (elapsed in 0 until config.checkIntervalHours * 3_600_000L) return
+        // Nothing is read here, not even the flag: SharedPreferences is a file, and the
+        // start-up path of an activity is no place to open one. The decision is the
+        // worker's — the same rule ../backups applies to its own start-up call.
         check(activity, config, manual = false)
     }
 
@@ -120,9 +116,7 @@ object Updater {
         if (!running.compareAndSet(false, true)) return
 
         val strings = UpdaterStrings.of(Locale.getDefault())
-        val prefs = UpdaterPrefs(activity)
         val manifestUrl = config.manifest
-        val currentCode = currentVersionCode(activity)
 
         // The device's own order of preference, so a 64-bit phone takes the
         // arm64 split and an armeabi-v7a box the v7a one out of one manifest.
@@ -132,6 +126,22 @@ object Updater {
             // Whatever the worker dies of, the answer still reaches the main thread: a
             // throwable that escaped here would leave `running` set for the life of the
             // process, and every later check — the About button included — silent.
+            val prefs = UpdaterPrefs(activity)
+
+            // The start-up check's own two reasons to do nothing, decided off the main
+            // thread: switched off, or looked recently. A manual check has neither.
+            // A clock moved backwards gives a negative interval: that is not "checked
+            // recently", it is an unusable timestamp, and the check goes ahead — the
+            // same rule ../backups applies to its own retry interval.
+            if (!manual) {
+                val elapsed = System.currentTimeMillis() - prefs.lastCheckAt
+                if (!prefs.enabled || elapsed in 0 until config.checkIntervalHours * 3_600_000L) {
+                    main.post { running.set(false) }
+                    return@Thread
+                }
+            }
+
+            val currentCode = currentVersionCode(activity)
             val result = try {
                 fetch(manifestUrl, abis)
             } catch (e: Throwable) {
