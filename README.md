@@ -70,6 +70,11 @@ Not from a `BroadcastReceiver`: a receiver has about ten seconds before the
 process may be killed, and a killed process in the middle of a write is exactly
 the case the module has to clean up afterwards.
 
+A Flutter app calls it from Dart instead, over its own method channel: the
+databases live where `path_provider` put them, so Dart is the only side that can
+say what goes into the archive. bikelog does this once its paths are
+initialised.
+
 ## Behaviour
 
 - **Once a calendar day**, in the phone's own time zone, not every 24 hours.
@@ -117,5 +122,5 @@ forced — a consent dialog has no business appearing behind a silent backup.
 | ReminderLists | db + photos + sounds + logs | wired in |
 | BikeTracker | db (rides, track points) | wired in |
 | Steps | db (day history) | wired in |
-| myplayer | settings + duration cache | no local archive yet |
-| bikelog | Flutter, sqflite + photos | needs a Dart counterpart; its backup is written in Dart |
+| myplayer | — | nothing to archive: its settings and book progress ride Android Auto Backup |
+| bikelog | Flutter, sqflite + photos | wired in: Dart hands the paths over a channel and asks for the check itself |
