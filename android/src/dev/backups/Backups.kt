@@ -2,6 +2,7 @@ package dev.backups
 
 import android.content.Context
 import android.util.Log
+import java.io.FileOutputStream
 import java.io.OutputStream
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -147,10 +148,17 @@ object Backups {
         val uri = BackupsStore.createPending(context, config, name)
         var written: String? = null
         try {
-            val bytes = context.contentResolver.openOutputStream(uri)?.use { out ->
-                val counting = CountingOutputStream(out)
-                config.write(counting)
-                counting.count
+            // The descriptor and not a stream, because the file has to be synced before it
+            // is published: closed but unsynced, the bytes are still in the page cache, and
+            // a power loss then would leave a truncated file already counted as a copy.
+            val bytes = context.contentResolver.openFileDescriptor(uri, "w")?.use { pfd ->
+                FileOutputStream(pfd.fileDescriptor).use { out ->
+                    val counting = CountingOutputStream(out)
+                    config.write(counting)
+                    counting.flush()
+                    pfd.fileDescriptor.sync()
+                    counting.count
+                }
             } ?: error("Cannot open $name for writing")
             // An empty file is what a writer that failed quietly leaves behind, and
             // publishing it would push a real copy out of the pool.
@@ -212,6 +220,11 @@ object Backups {
 
         override fun flush() = target.flush()
 
-        override fun close() = target.close()
+        /**
+         * A close from the writer — ZipOutputStream.use closes what it wraps — must
+         * not close the file: it still has to be synced and is closed by [perform]
+         * itself. Flushing is all a close can mean here.
+         */
+        override fun close() = target.flush()
     }
 }

@@ -37,8 +37,8 @@ data class BackupsConfig(
      * Whatever wraps the stream must be finished before returning — a
      * ZipOutputStream that is not closed leaves a truncated archive, and a
      * truncated archive that is published would push a good copy out of the
-     * pool. Closing the stream itself is fine; the module closes it again and
-     * a second close does nothing.
+     * pool. Closing the stream itself is fine: it only flushes, and the module
+     * syncs and closes the file after the writer returns.
      */
     val write: (OutputStream) -> Unit,
 ) {
