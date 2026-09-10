@@ -358,7 +358,7 @@ label shows bytes downloaded when `total <= 0`.
 
 ---
 
-### 12. P3 — Start-up check reads preferences and PackageManager on the main thread
+### 12. P3 [FIXED 6392a83] — Start-up check reads preferences and PackageManager on the main thread
 
 **Affected components:** `Updater.checkOnStart` lines 42-45 (`UpdaterPrefs` → 
 `SharedPreferences` load, on the caller's thread in `onCreate`); `Updater.check` line
