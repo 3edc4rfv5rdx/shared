@@ -54,23 +54,15 @@ internal object UpdaterDialog {
     }
 
     /**
-     * The pieces every dialog here is made of, and the two colours they use.
-     *
-     * White pills on light, grey on dark — a fixed pair rather than the host's
-     * theme colours, so the updater looks the same in all eight apps.
+     * The pieces every dialog here is made of, in the colours [UpdaterColors]
+     * keeps for both this module and ../about.
      */
     private class Ui(val activity: Activity) {
         private val density = activity.resources.displayMetrics.density
 
-        // Black on white, fixed. The updater cannot ask the host which colours it
-        // is drawing in — an app that picks its theme in Compose leaves both the
-        // system's night flag and the activity's XML theme saying something else —
-        // and a dialog that guesses wrong is a dialog nobody can read.
-        private val cardFill = 0xFFFFFFFF.toInt()
-        private val pillFill = 0xFFFFFFFF.toInt()
-        private val pillStroke = 0xFF000000.toInt()
-        private val trackFill = 0xFFDDDDDD.toInt()
-        private val textColor = 0xFF000000.toInt()
+        private val cardFill = UpdaterColors.card
+        private val trackFill = UpdaterColors.track
+        private val textColor = UpdaterColors.text
 
         fun dp(value: Int): Int = (value * density).toInt()
 
@@ -108,21 +100,23 @@ internal object UpdaterDialog {
                 text = label
                 gravity = Gravity.CENTER
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
-                setTextColor(if (inverted) cardFill else textColor)
+                // The one the dialog is really asking for is filled; the rest are
+                // the same violet drained to a tint, and both carry the outline.
+                setTextColor(if (inverted) UpdaterColors.onAccent else UpdaterColors.onAccentSoft)
                 setPadding(dp(14), dp(13), dp(14), dp(13))
                 isClickable = true
                 background = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
                     cornerRadius = dp(100).toFloat()
-                    setColor(if (inverted) textColor else pillFill)
-                    setStroke(dp(1), pillStroke)
+                    setColor(if (inverted) UpdaterColors.accent else UpdaterColors.accentSoft)
+                    setStroke(dp(2), UpdaterColors.pillStroke)
                 }
                 setOnClickListener { onClick() }
             }
 
         /**
-         * A progress bar drawn like everything else here: a grey track with a
-         * black fill, both rounded, and as tall as it is told to be. The platform
+         * A progress bar drawn like everything else here: a tinted track with an
+         * accent fill, both rounded, and as tall as it is told to be. The platform
          * bar is a few pixels of the host's accent colour and ignores the height
          * it is given.
          */
@@ -134,7 +128,7 @@ internal object UpdaterDialog {
             }
             val fill = GradientDrawable().apply {
                 cornerRadius = radius
-                setColor(textColor)
+                setColor(UpdaterColors.accent)
             }
             val layers = LayerDrawable(
                 arrayOf(track, ClipDrawable(fill, Gravity.START, ClipDrawable.HORIZONTAL))

@@ -117,8 +117,10 @@ is a newer build: nothing is downloaded before the answer.
   (`checkIntervalHours`, 6 by default) offers it again.
 
 The dialog is a plain `AlertDialog` rather than Compose or a Flutter widget: one
-updater serves both stacks, and it takes the host activity's theme, so it lands
-in the app's colours even though it is not the app's own toolkit.
+updater serves both stacks. Its colours are its own rather than the host's, in
+`UpdaterColors` — a white card, black text, and outlined violet buttons, the
+filled one being whatever the dialog is really asking for. `../about` draws from the same
+file, so the card its update button opens is the card it came from.
 
 Strings are localized in `UpdaterStrings.kt` (en/ru/uk) rather than in
 `res/values-*`: shared sources have no `R` of their own, and reaching the app's
