@@ -30,6 +30,21 @@ object Updater {
     private val running = AtomicBoolean(false)
     private val main = Handler(Looper.getMainLooper())
 
+    /**
+     * Whether the server has already answered a start-up check in this process.
+     *
+     * This is the whole of the rationing on asking: once per process, not once
+     * per so many hours. An app reopened from the background asks nothing, an app
+     * whose process was killed and started again asks once, and a build installed
+     * over this one is a new process and asks at once — which is what a clock in
+     * preferences got wrong, since a look that found nothing silenced the hours
+     * in which the next build was published.
+     *
+     * Set only once the server has actually answered, so a launch with no network
+     * does not use up the process's one look.
+     */
+    private val asked = AtomicBoolean(false)
+
     // The build the user agreed to install but could not yet, because the app
     // did not hold the install permission. Sending them to Settings takes them
     // out of the app, so the answer comes back as a resume rather than a result.
@@ -47,18 +62,19 @@ object Updater {
     fun checkOnStart(activity: Activity, config: UpdaterConfig) {
         // Nothing is read here, not even the flag: SharedPreferences is a file, and the
         // start-up path of an activity is no place to open one. The decision is the
-        // worker's — the same rule ../backups applies to its own start-up call.
+        // worker's — the same rule ../backups applies to its own start-up call. The one
+        // thing settled here is [asked], which is in memory and costs nothing to read:
+        // an activity recreated by a theme or a rotation must not ask again.
+        if (asked.get()) return
         check(activity, config, manual = false)
     }
 
     /**
-     * The check behind a menu entry. It ignores the interval and a build the
-     * user cancelled, and it reports what it found either way — a silent button is a
-     * broken button.
-     *
-     * It also leaves the interval where it found it. The clock belongs to the
-     * start-up check alone, and a button that wound it would silence the next
-     * six hours of start-up checks each time it was pressed.
+     * The check behind a menu entry. It ignores the offer interval, the switch
+     * and a build the user cancelled, and it reports what it found either way —
+     * a silent button is a broken button. It does not use up the process's one
+     * silent look either: that is the start-up check's, and a button pressed here
+     * must not decide anything for the next launch.
      */
     fun checkNow(activity: Activity, config: UpdaterConfig) {
         check(activity, config, manual = true)
@@ -155,17 +171,12 @@ object Updater {
             // process, and every later check — the About button included — silent.
             val prefs = UpdaterPrefs(activity)
 
-            // The start-up check's own two reasons to do nothing, decided off the main
-            // thread: switched off, or looked recently. A manual check has neither.
-            // A clock moved backwards gives a negative interval: that is not "checked
-            // recently", it is an unusable timestamp, and the check goes ahead — the
-            // same rule ../backups applies to its own retry interval.
-            if (!manual) {
-                val elapsed = System.currentTimeMillis() - prefs.lastCheckAt
-                if (!prefs.enabled || elapsed in 0 until config.checkIntervalHours * 3_600_000L) {
-                    main.post { running.set(false) }
-                    return@Thread
-                }
+            // The start-up check's one reason to do nothing before it has asked
+            // anything, decided off the main thread: the user switched it off. A
+            // manual check is the user asking, so the switch does not apply to it.
+            if (!manual && !prefs.enabled) {
+                main.post { running.set(false) }
+                return@Thread
             }
 
             val currentCode = currentVersionCode(activity)
@@ -176,13 +187,13 @@ object Updater {
             }
 
             main.post {
-                // The interval is the start-up check's own clock, and only its own
-                // looks wind it. A manual check neither waits on it — it is a button
-                // the user just pressed — nor spends it: the About screen's button
-                // would otherwise put the next six hours of start-up checks to sleep
-                // every time it was used, which is the one thing it must not do.
-                fun markChecked(at: Long) {
-                    if (!manual) prefs.lastCheckAt = at
+                // Written the moment the user has dealt with the offer, whichever
+                // way. It is what the start-up check throttles on, so an offer
+                // nobody saw — an activity gone before the dialog was up, or
+                // destroyed under it — writes nothing and is made again next launch.
+                fun markOffered(versionCode: Long) {
+                    prefs.lastOfferedVersionCode = versionCode
+                    prefs.lastOfferedAt = System.currentTimeMillis()
                 }
 
                 // `running` is held until the operation is over on screen: a message
@@ -191,10 +202,10 @@ object Updater {
                 val info = when (result) {
                     is ManifestResult.Ok -> result.info
 
-                    // The server answered, so the check counts and the interval
-                    // starts over; there is simply nothing here for this device.
+                    // The server answered, so this process has had its look;
+                    // there is simply nothing here for this device.
                     is ManifestResult.NoBuildForDevice -> {
-                        markChecked(System.currentTimeMillis())
+                        asked.set(true)
                         if (manual) UpdaterDialog.message(activity, strings.errorNoBuild)
                         running.set(false)
                         return@post
@@ -207,10 +218,9 @@ object Updater {
                     }
                 }
 
-                // The check counts from here on: the server answered, and every road
-                // below either has nothing to show or shows the offer. The one
-                // exception is an offer nobody saw — see the confirm dialog below.
-                markChecked(System.currentTimeMillis())
+                // The server answered, so this process has had its look. Whether an
+                // offer is made below is a separate question with its own memory.
+                asked.set(true)
 
                 // A manifest for another app means the config points at the wrong
                 // folder. Installing it would put a second app on the phone rather
@@ -234,24 +244,36 @@ object Updater {
                     return@post
                 }
 
-                // An offer the user never saw must not spend the interval: an activity
-                // gone before the dialog was up, or destroyed under it, gives the check
-                // back its turn, so the next start-up looks again instead of six hours on.
+                // The same build, put off not long ago. Offering it again every time
+                // the app is opened is the nagging the interval exists to stop — and
+                // all it stops: this is the one road that waits on a clock, and only
+                // for a build this user has already answered about. A clock moved
+                // backwards gives a negative age, which is not "recently shown" but an
+                // unusable timestamp, and the offer goes ahead — the same rule
+                // ../backups applies to its own retry interval.
+                if (!manual && info.versionCode == prefs.lastOfferedVersionCode) {
+                    val age = System.currentTimeMillis() - prefs.lastOfferedAt
+                    if (age in 0 until config.offerIntervalHours * 3_600_000L) {
+                        running.set(false)
+                        return@post
+                    }
+                }
+
                 val shown = UpdaterDialog.confirm(
                     activity = activity,
                     strings = strings,
                     info = info,
-                    onUpdate = { startDownload(activity, config, strings, info) },
+                    onUpdate = {
+                        markOffered(info.versionCode)
+                        startDownload(activity, config, strings, info)
+                    },
                     onCancel = { prefs.declinedVersionCode = info.versionCode },
                     onClosed = { answered ->
-                        if (!answered) markChecked(0L)
+                        if (answered) markOffered(info.versionCode)
                         running.set(false)
                     },
                 )
-                if (!shown) {
-                    markChecked(0L)
-                    running.set(false)
-                }
+                if (!shown) running.set(false)
             }
         }.start()
     }

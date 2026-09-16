@@ -22,8 +22,18 @@ data class UpdaterConfig(
     val user: String = "3edc4rfv5rdx",
     /** A manifest hosted somewhere else entirely; used exactly as given. */
     val manifestUrl: String = "",
-    /** Hours between two silent start-up checks. A manual check ignores this. */
-    val checkIntervalHours: Int = 6,
+    /**
+     * Hours before the same build is put in front of the user a second time.
+     *
+     * It throttles the offer, not the look: the server is asked once per process
+     * whatever this says, because a manifest under a kilobyte is not worth
+     * rationing and a build published a minute ago should not wait on a clock.
+     * What is worth rationing is the dialog, and only for a build the user has
+     * already seen and put off — a newer one is offered at once.
+     *
+     * A manual check ignores this entirely.
+     */
+    val offerIntervalHours: Int = 6,
 ) {
     /** The repository this app's releases live in — the name, not the address. */
     val repoName: String

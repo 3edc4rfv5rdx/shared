@@ -59,7 +59,7 @@ Updater.checkOnStart(this, UpdaterConfig(appKey = "reminderlists", repo = "Remin
 
 The repository is all an app has to say, and only when its name is not the app
 key itself — `bikelog` and `xcalc` pass nothing but the key. The account and the
-check interval are defaults in `UpdaterConfig`, so neither is written eight
+offer interval are defaults in `UpdaterConfig`, so neither is written eight
 times. An app published elsewhere passes a `manifestUrl` of its own, which is
 then used exactly as given.
 
@@ -78,6 +78,23 @@ class MainActivity : FlutterActivity() {
 For a "check for updates" menu entry, `Updater.checkNow(activity, config)` skips
 the interval and reports the result either way.
 
+## How often it looks
+
+The server is asked once per process, and only once it has answered does that
+look count — a launch with no network does not use it up. Nothing about the look
+is written to preferences: a manifest is well under a kilobyte, and an app
+reopened from the background asks nothing at all, because it is the same
+process.
+
+What is rationed is the **offer**, not the look. A build the user has already
+been shown and answered — Later, or the dialog closed — is not put up again for
+`offerIntervalHours`. A build with any other version code has not been seen, so
+it is offered the moment it appears, however recently the last one was.
+
+The two were one clock until it became clear what that costs: a look that found
+nothing silenced the hours in which the next build was published, so an app
+could sit for six hours next to an update it had already been told about.
+
 ## Settings
 
 The module keeps its own on/off flag and gives a settings screen the two calls
@@ -94,7 +111,8 @@ the switch exists to stop.
 `Updater.peek(activity, config) { newer -> }` asks the same question and shows
 nothing: the answer comes back on the main thread, for a screen that draws it
 itself. It remembers nothing — neither the interval nor a declined build — so a
-look never costs the start-up check its turn.
+look never costs the start-up check its turn — neither the process's one look
+nor the offer interval.
 
 ## What the user sees
 
@@ -113,8 +131,8 @@ is a newer build: nothing is downloaded before the answer.
   SHA-256, hands the APK to the system installer.
 - **Cancel** — this build is put aside and not offered again. A newer one still
   gets through.
-- **Later** — nothing is remembered; the next check after the interval
-  (`checkIntervalHours`, 6 by default) offers it again.
+- **Later** — this build is not put up again for `offerIntervalHours` (6 by
+  default); after that, or as soon as a newer build appears, it is offered again.
 
 The dialog is a plain `AlertDialog` rather than Compose or a Flutter widget: one
 updater serves both stacks. Its colours are its own rather than the host's, in
