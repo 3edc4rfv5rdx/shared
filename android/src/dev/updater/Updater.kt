@@ -55,6 +55,10 @@ object Updater {
      * The check behind a menu entry. It ignores the interval and a build the
      * user cancelled, and it reports what it found either way — a silent button is a
      * broken button.
+     *
+     * It also leaves the interval where it found it. The clock belongs to the
+     * start-up check alone, and a button that wound it would silence the next
+     * six hours of start-up checks each time it was pressed.
      */
     fun checkNow(activity: Activity, config: UpdaterConfig) {
         check(activity, config, manual = true)
@@ -172,6 +176,15 @@ object Updater {
             }
 
             main.post {
+                // The interval is the start-up check's own clock, and only its own
+                // looks wind it. A manual check neither waits on it — it is a button
+                // the user just pressed — nor spends it: the About screen's button
+                // would otherwise put the next six hours of start-up checks to sleep
+                // every time it was used, which is the one thing it must not do.
+                fun markChecked(at: Long) {
+                    if (!manual) prefs.lastCheckAt = at
+                }
+
                 // `running` is held until the operation is over on screen: a message
                 // is over as soon as it is up, the confirm dialog when it is closed
                 // by anything but Update, and after Update the download carries it.
@@ -181,7 +194,7 @@ object Updater {
                     // The server answered, so the check counts and the interval
                     // starts over; there is simply nothing here for this device.
                     is ManifestResult.NoBuildForDevice -> {
-                        prefs.lastCheckAt = System.currentTimeMillis()
+                        markChecked(System.currentTimeMillis())
                         if (manual) UpdaterDialog.message(activity, strings.errorNoBuild)
                         running.set(false)
                         return@post
@@ -197,7 +210,7 @@ object Updater {
                 // The check counts from here on: the server answered, and every road
                 // below either has nothing to show or shows the offer. The one
                 // exception is an offer nobody saw — see the confirm dialog below.
-                prefs.lastCheckAt = System.currentTimeMillis()
+                markChecked(System.currentTimeMillis())
 
                 // A manifest for another app means the config points at the wrong
                 // folder. Installing it would put a second app on the phone rather
@@ -231,12 +244,12 @@ object Updater {
                     onUpdate = { startDownload(activity, config, strings, info) },
                     onCancel = { prefs.declinedVersionCode = info.versionCode },
                     onClosed = { answered ->
-                        if (!answered) prefs.lastCheckAt = 0L
+                        if (!answered) markChecked(0L)
                         running.set(false)
                     },
                 )
                 if (!shown) {
-                    prefs.lastCheckAt = 0L
+                    markChecked(0L)
                     running.set(false)
                 }
             }

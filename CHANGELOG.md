@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+- E: A manual check no longer winds the start-up check's clock: the About button was putting the next six hours of silent checks to sleep every time it was pressed
 - F: peek() hands back the build it found instead of a yes, and install() puts that build on without asking again — the caller's own button already carried the offer
 - E: The download dialog no longer steps wider as the percentage grows a digit: every card in the module is one fixed width now, the screen less a margin and never past 400dp
 - R: The card, the pills and the way a dialog goes on screen live in one UpdaterUi that ../about draws from too, instead of a copy in each module
