@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+- E: The download dialog no longer steps wider as the percentage grows a digit: every card in the module is one fixed width now, the screen less a margin and never past 400dp
 - R: The card, the pills and the way a dialog goes on screen live in one UpdaterUi that ../about draws from too, instead of a copy in each module
 - F: The start-up check decides whether to run on its own thread, so the launch activity opens no preferences file
 - E: An update dialog lost to a screen going away is offered again on the next start instead of six hours later

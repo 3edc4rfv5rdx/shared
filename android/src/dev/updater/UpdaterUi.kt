@@ -169,7 +169,32 @@ internal class UpdaterUi(val activity: Activity) {
                 window?.decorView?.isForceDarkAllowed = false
             }
             dialog.show()
+            // After show(), which is when the window has attributes to set. Fixed
+            // rather than wrapped: the download dialog's label grows by a digit as
+            // the percentage climbs, and a card measured from its content would step
+            // wider three times on the way to 100%. It also settles the confirm
+            // dialog, whose width would otherwise follow the length of a version
+            // string. One dialog in eight apps means one width too.
+            window?.setLayout(width(activity), ViewGroup.LayoutParams.WRAP_CONTENT)
             return true
         }
+
+        /**
+         * The card's width: the screen less a margin on either side, but never
+         * wider than [MAX_WIDTH_DP] — a tablet or a TV box would otherwise hand a
+         * two-line dialog the whole of a very wide screen.
+         */
+        private fun width(activity: Activity): Int {
+            val metrics = activity.resources.displayMetrics
+            val margin = (SIDE_MARGIN_DP * metrics.density).toInt()
+            val max = (MAX_WIDTH_DP * metrics.density).toInt()
+            return minOf(metrics.widthPixels - 2 * margin, max)
+        }
+
+        /** How much of the screen is left showing on either side of the card, in dp. */
+        private const val SIDE_MARGIN_DP = 24
+
+        /** How wide the card is allowed to get however wide the screen is, in dp. */
+        private const val MAX_WIDTH_DP = 400
     }
 }
