@@ -75,11 +75,15 @@ object Updater {
     }
 
     /**
-     * A check that answers instead of showing anything: true when the release
-     * folder holds a build newer than the installed one, false for everything
-     * else — up to date, nothing for this device, a manifest for another app, an
-     * unreachable server. For a caller that draws the answer itself, such as the
-     * About screen's button.
+     * A check that answers instead of showing anything: the build on the server
+     * when it is newer than the installed one, null for everything else — up to
+     * date, nothing for this device, a manifest for another app, an unreachable
+     * server. For a caller that draws the answer itself, such as the About
+     * screen's button.
+     *
+     * It hands back the whole build rather than a yes, so the caller can name
+     * the version on its button and then pass it to [install] instead of sending
+     * the user through a second look at the same manifest.
      *
      * It remembers nothing. The interval and the declined build belong to the
      * check that actually offers an update; a look that only colours a button
@@ -88,22 +92,41 @@ object Updater {
      * [onResult] runs on the main thread, and not at all if the activity is gone
      * by the time the answer arrives.
      */
-    fun peek(activity: Activity, config: UpdaterConfig, onResult: (Boolean) -> Unit) {
+    fun peek(activity: Activity, config: UpdaterConfig, onResult: (UpdateInfo?) -> Unit) {
         val manifestUrl = config.manifest
         val packageName = activity.packageName
         val currentCode = currentVersionCode(activity)
         val abis = Build.SUPPORTED_ABIS.toList()
 
         Thread {
-            val info = (fetch(manifestUrl, abis) as? ManifestResult.Ok)?.info
-            val newer = info != null &&
-                info.packageName == packageName &&
-                info.versionCode > currentCode
+            val found = try {
+                (fetch(manifestUrl, abis) as? ManifestResult.Ok)?.info
+            } catch (e: Throwable) {
+                null
+            }
+            val newer = found?.takeIf {
+                it.packageName == packageName && it.versionCode > currentCode
+            }
 
             main.post {
                 if (!activity.isFinishing && !activity.isDestroyed) onResult(newer)
             }
         }.start()
+    }
+
+    /**
+     * Installs a build [peek] has already found, with no question in between:
+     * the caller's own button carried the offer and its version, and asking the
+     * same thing again in a dialog is one tap for nothing.
+     *
+     * Everything the confirm dialog guards is still here — the permission ask,
+     * the progress dialog, the digest check — and the download takes [running]
+     * exactly as a check that ended in Update would. A second operation already
+     * on screen wins and this one does nothing.
+     */
+    fun install(activity: Activity, config: UpdaterConfig, info: UpdateInfo) {
+        if (!running.compareAndSet(false, true)) return
+        startDownload(activity, config, UpdaterStrings.of(Locale.getDefault()), info)
     }
 
     /** The manifest as this device reads it; null when the server said nothing usable. */
