@@ -5,6 +5,7 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import dev.updater.UpdateInfo
 import dev.updater.Updater
 import java.util.Locale
 
@@ -24,6 +25,9 @@ object About {
      */
     fun show(activity: Activity, config: AboutConfig) {
         val strings = AboutStrings.of(Locale.getDefault())
+        // The build the probe found for this card, if it has answered by the time
+        // the user taps. One card's worth of state, gone with the call.
+        var offered: UpdateInfo? = null
 
         val facts = mutableListOf(strings.version to versionName(activity))
         // A tree that has never been built through the scripts carries no date,
@@ -43,19 +47,40 @@ object About {
             onMail = { address ->
                 open(activity, Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:$address")))
             },
-            // The start-up check keeps six hours between two looks at the server,
-            // which is right for a phone and useless for a build published a
-            // minute ago. This one ignores the interval and answers either way.
+            // Whatever the probe below found, held from the moment it answers until
+            // the button is tapped. Main thread on both sides: the probe posts its
+            // answer there and the tap arrives there, so there is nothing to guard.
             onUpdate = if (config.offerUpdate) {
-                { Updater.checkNow(activity, config.updater) }
+                {
+                    val found = offered
+                    if (found != null) {
+                        // The button already said "Update 0.8.263" and the user
+                        // pressed it. A confirm dialog here would ask the same
+                        // question twice and fetch the same manifest again.
+                        Updater.install(activity, config.updater, found)
+                    } else {
+                        // Nothing found, or the probe has not answered yet: the
+                        // button still reads as a check, so it does one. The
+                        // start-up check keeps six hours between two looks at the
+                        // server, which is right for a phone and useless for a
+                        // build published a minute ago; this one ignores the
+                        // interval and reports what it found either way.
+                        Updater.checkNow(activity, config.updater)
+                    }
+                }
             } else {
                 null
             },
-            // Asked as the card comes up, so the button can say whether there is
-            // anything to update to instead of promising it. The tap still goes
-            // through checkNow: this look decides nothing and installs nothing.
+            // Asked as the card comes up, so the button can name the version there
+            // is to update to instead of promising one. This look decides nothing
+            // and installs nothing; it only says what the button should read.
             onProbe = if (config.offerUpdate) {
-                { answer -> Updater.peek(activity, config.updater, answer) }
+                { answer ->
+                    Updater.peek(activity, config.updater) { info ->
+                        offered = info
+                        answer(info?.versionName)
+                    }
+                }
             } else {
                 null
             },

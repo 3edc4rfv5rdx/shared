@@ -100,9 +100,10 @@ internal object AboutDialog {
      * is simply not there — a check that cannot answer is worse than none.
      *
      * [onProbe] is that same app's silent look at the server, asked as the dialog
-     * opens. Until it answers, and forever if it answers no, the button offers a
-     * check; a yes turns it into the offer itself. It is only consulted when
-     * there is a button to draw, and the two are given together.
+     * opens. Until it answers, and forever if it answers with null, the button
+     * offers a check; a version name turns it into the offer itself, named. It is
+     * only consulted when there is a button to draw, and the two are given
+     * together — [onUpdate] is what does something about what it found.
      */
     fun show(
         activity: Activity,
@@ -115,7 +116,7 @@ internal object AboutDialog {
         onOpen: (String) -> Unit,
         onMail: (String) -> Unit,
         onUpdate: (() -> Unit)?,
-        onProbe: (((Boolean) -> Unit) -> Unit)? = null,
+        onProbe: (((newerVersion: String?) -> Unit) -> Unit)? = null,
     ) {
         if (!UpdaterUi.alive(activity)) return
         val ui = UpdaterUi(activity)
@@ -143,8 +144,12 @@ internal object AboutDialog {
             pills.add(update)
             // The answer lands while the dialog is up, on the main thread. A card
             // already dismissed by then simply keeps a view nobody is looking at.
-            onProbe?.invoke { newer ->
-                if (newer) ui.style(update, strings.update, inverted = true)
+            // It names the version, so the offer is on the button itself and the
+            // tap has nothing left to ask — see About's onUpdate.
+            onProbe?.invoke { newerVersion ->
+                if (newerVersion != null) {
+                    ui.style(update, "${strings.update} $newerVersion", inverted = true)
+                }
             }
         }
         pills.add(ui.pill(strings.close) { dialog.dismiss() })
