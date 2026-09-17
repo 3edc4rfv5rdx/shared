@@ -25,8 +25,8 @@ data class UpdaterConfig(
     /**
      * Hours before the same build is put in front of the user a second time.
      *
-     * It throttles the offer, not the look: the server is asked once per process
-     * whatever this says, because a manifest under a kilobyte is not worth
+     * It throttles the offer, not the look: the server is asked once an hour at
+     * most while the process lives, whatever this says, because a manifest under a kilobyte is not worth
      * rationing and a build published a minute ago should not wait on a clock.
      * What is worth rationing is the dialog, and only for a build the user has
      * already seen and put off — a newer one is offered at once.

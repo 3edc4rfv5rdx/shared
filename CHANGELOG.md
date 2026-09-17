@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+- E: An app kept alive in the background asks the server again when it is brought back an hour after the last answer, instead of never again in that process
 - E: A build published minutes after a check is offered at once: the server is asked once per process instead of once per six hours, and the interval now holds back only the repeat of an offer the user has already answered
 - R: checkIntervalHours is offerIntervalHours, which is what it has always governed
 - E: A manual check no longer winds the start-up check's clock: the About button was putting the next six hours of silent checks to sleep every time it was pressed

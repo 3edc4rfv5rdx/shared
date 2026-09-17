@@ -80,11 +80,18 @@ the interval and reports the result either way.
 
 ## How often it looks
 
-The server is asked once per process, and only once it has answered does that
-look count — a launch with no network does not use it up. Nothing about the look
-is written to preferences: a manifest is well under a kilobyte, and an app
-reopened from the background asks nothing at all, because it is the same
-process.
+The server is asked when the app starts, and again whenever its launch activity
+comes back to the screen an hour or more after the last answer. Only an answer
+counts — a launch with no network does not use the look up. Nothing about the
+look is written to preferences: a manifest is well under a kilobyte, and the
+hour lives in memory, so a new process — a build installed over this one
+included — asks at once.
+
+The app calls `checkOnStart` once, in `onCreate`; the module itself watches the
+activity's later starts. Once per process was not enough: an app brought back
+from the background gets its activity back without an `onCreate`, and a player
+keeps its process for days, so a build published after its one look was never
+offered.
 
 What is rationed is the **offer**, not the look. A build the user has already
 been shown and answered — Later, or the dialog closed — is not put up again for
@@ -111,8 +118,8 @@ the switch exists to stop.
 `Updater.peek(activity, config) { newer -> }` asks the same question and shows
 nothing: the answer comes back on the main thread, for a screen that draws it
 itself. It remembers nothing — neither the interval nor a declined build — so a
-look never costs the start-up check its turn — neither the process's one look
-nor the offer interval.
+look never costs the start-up check its turn — neither the hourly look nor the
+offer interval.
 
 ## What the user sees
 

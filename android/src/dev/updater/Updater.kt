@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import java.io.File
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
@@ -31,19 +32,28 @@ object Updater {
     private val main = Handler(Looper.getMainLooper())
 
     /**
-     * Whether the server has already answered a start-up check in this process.
+     * When the server last answered a start-up check, on the monotonic clock; null
+     * before the first answer in this process.
      *
-     * This is the whole of the rationing on asking: once per process, not once
-     * per so many hours. An app reopened from the background asks nothing, an app
-     * whose process was killed and started again asks once, and a build installed
-     * over this one is a new process and asks at once — which is what a clock in
-     * preferences got wrong, since a look that found nothing silenced the hours
-     * in which the next build was published.
+     * This is the whole of the rationing on asking: once per [LOOK_INTERVAL_MS]
+     * while the process lives, and at once in a new process — a build installed
+     * over this one is a new process. It is kept in memory and not in
+     * preferences, because a stored clock let a look that found nothing silence
+     * the hours in which the next build was published. It is not once per process
+     * either: a player keeps its process for days, and a build published after its
+     * one look was never offered.
      *
      * Set only once the server has actually answered, so a launch with no network
-     * does not use up the process's one look.
+     * does not use up the look. Read and written on the main thread only.
      */
-    private val asked = AtomicBoolean(false)
+    private var lookedAt: Long? = null
+
+    /** How long a start-up look stands before coming back to the app asks again. */
+    private const val LOOK_INTERVAL_MS = 60 * 60 * 1000L
+
+    // Repeats the start-up check whenever the launch activity comes back to the
+    // screen. Registered by the first checkOnStart and kept for the process.
+    private var startWatch: Application.ActivityLifecycleCallbacks? = null
 
     // The build the user agreed to install but could not yet, because the app
     // did not hold the install permission. Sending them to Settings takes them
@@ -62,19 +72,57 @@ object Updater {
     fun checkOnStart(activity: Activity, config: UpdaterConfig) {
         // Nothing is read here, not even the flag: SharedPreferences is a file, and the
         // start-up path of an activity is no place to open one. The decision is the
-        // worker's — the same rule ../backups applies to its own start-up call. The one
-        // thing settled here is [asked], which is in memory and costs nothing to read:
-        // an activity recreated by a theme or a rotation must not ask again.
-        if (asked.get()) return
+        // worker's — the same rule ../backups applies to its own start-up call.
+        watchStarts(activity, config)
+        checkIfDue(activity, config)
+    }
+
+    /**
+     * The start-up check, unless the server answered one within the interval.
+     * [lookedAt] is in memory and costs nothing to read: an activity recreated by
+     * a theme or a rotation, or brought back a minute later, does not ask again.
+     */
+    private fun checkIfDue(activity: Activity, config: UpdaterConfig) {
+        val last = lookedAt
+        if (last != null && SystemClock.elapsedRealtime() - last < LOOK_INTERVAL_MS) return
         check(activity, config, manual = false)
+    }
+
+    /**
+     * Calls [checkIfDue] each time an activity of the caller's class starts.
+     *
+     * An app brought back from the background gets its activity back as it was,
+     * with no onCreate for the call to sit in, so the call alone would never run
+     * again while the process lives. Watching here keeps every app's call where it
+     * is. The start right after the first call finds the check already running
+     * and does nothing.
+     */
+    private fun watchStarts(activity: Activity, config: UpdaterConfig) {
+        if (startWatch != null) return
+        val launcher = activity.javaClass
+
+        val watch = object : Application.ActivityLifecycleCallbacks {
+            override fun onActivityStarted(activity: Activity) {
+                if (activity.javaClass == launcher) checkIfDue(activity, config)
+            }
+
+            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = Unit
+            override fun onActivityResumed(activity: Activity) = Unit
+            override fun onActivityPaused(activity: Activity) = Unit
+            override fun onActivityStopped(activity: Activity) = Unit
+            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
+            override fun onActivityDestroyed(activity: Activity) = Unit
+        }
+        startWatch = watch
+        activity.application.registerActivityLifecycleCallbacks(watch)
     }
 
     /**
      * The check behind a menu entry. It ignores the offer interval, the switch
      * and a build the user cancelled, and it reports what it found either way —
-     * a silent button is a broken button. It does not use up the process's one
-     * silent look either: that is the start-up check's, and a button pressed here
-     * must not decide anything for the next launch.
+     * a silent button is a broken button. It does not count as the start-up
+     * check's look either: a button pressed here must not put the next silent
+     * check off.
      */
     fun checkNow(activity: Activity, config: UpdaterConfig) {
         check(activity, config, manual = true)
@@ -202,10 +250,10 @@ object Updater {
                 val info = when (result) {
                     is ManifestResult.Ok -> result.info
 
-                    // The server answered, so this process has had its look;
-                    // there is simply nothing here for this device.
+                    // The server answered, so this look counts; there is simply
+                    // nothing here for this device.
                     is ManifestResult.NoBuildForDevice -> {
-                        asked.set(true)
+                        if (!manual) lookedAt = SystemClock.elapsedRealtime()
                         if (manual) UpdaterDialog.message(activity, strings.errorNoBuild)
                         running.set(false)
                         return@post
@@ -218,9 +266,9 @@ object Updater {
                     }
                 }
 
-                // The server answered, so this process has had its look. Whether an
-                // offer is made below is a separate question with its own memory.
-                asked.set(true)
+                // The server answered, so this look counts. Whether an offer is made
+                // below is a separate question with its own memory.
+                if (!manual) lookedAt = SystemClock.elapsedRealtime()
 
                 // A manifest for another app means the config points at the wrong
                 // folder. Installing it would put a second app on the phone rather
