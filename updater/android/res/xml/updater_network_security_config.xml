@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  No cleartext, from anywhere.
+
+  Updates are read from github.com over HTTPS, so nothing here needs an
+  exception, and an app that carries this file cannot be talked into fetching an
+  APK over plain HTTP. What protects the install on top of that is the APK
+  signature — Android refuses a package signed with another key — and the
+  SHA-256 in the manifest, which catches a truncated transfer.
+
+  An app that already ships its own network_security_config must not use this
+  file: two resources cannot share a name. Such an app simply keeps its own,
+  as long as it does not permit cleartext.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>
