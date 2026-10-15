@@ -25,8 +25,8 @@ only the facts are drawn here.
 android {
     sourceSets {
         getByName("main") {
-            // Kotlin projects: $rootDir/../about   Flutter: $rootDir/../../about
-            kotlin.directories.add("$rootDir/../about/android/src")
+            // Kotlin projects: $rootDir/../shared/about   Flutter: $rootDir/../../shared/about
+            kotlin.directories.add("$rootDir/../shared/about/android/src")
         }
     }
 }

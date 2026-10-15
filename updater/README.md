@@ -17,20 +17,20 @@ Three edits, none of which touch the app's own code beyond one line.
 
 ```kotlin
 android {
-    // Kotlin projects: ../updater/android/…   Flutter projects: ../../../updater/android/…
+    // Kotlin projects: ../shared/updater/android/…   Flutter projects: ../../../shared/updater/android/…
     sourceSets {
         getByName("main") {
-            // Kotlin projects: $rootDir/../updater   Flutter: $rootDir/../../updater
-            kotlin.directories.add("$rootDir/../updater/android/src")
-            res.directories.add("$rootDir/../updater/android/res")
+            // Kotlin projects: $rootDir/../shared/updater   Flutter: $rootDir/../../shared/updater
+            kotlin.directories.add("$rootDir/../shared/updater/android/src")
+            res.directories.add("$rootDir/../shared/updater/android/res")
         }
     }
 }
 ```
 
 `$rootDir` is the project root, so a Kotlin project at `PRJ/BikeTracker` writes
-`$rootDir/../updater/…` and a Flutter project, whose Gradle root is
-`PRJ/bikelog/android`, writes `$rootDir/../../updater/…`.
+`$rootDir/../shared/updater/…` and a Flutter project, whose Gradle root is
+`PRJ/bikelog/android`, writes `$rootDir/../../shared/updater/…`.
 
 `kotlin` and not `java`: on these AGP/KGP versions the Kotlin source set no
 longer inherits the java one, and `.kt` files placed in a java source dir are

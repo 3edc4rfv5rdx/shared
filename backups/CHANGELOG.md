@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+- I: The module lives in the shared repository now, so the integration snippet points at ../shared/backups
 - E: An extension that does not match the MIME type is refused when the config is built, instead of producing copies that never rotate
 - E: A copy is synced to disk before it is published, so a power loss right after cannot leave a truncated file among the kept ones
 - E: The copy just made is never deleted by the rotation that follows it, whatever the phone clock did in between

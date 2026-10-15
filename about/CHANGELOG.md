@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+- I: The module lives in the shared repository now, so the integration snippet points at ../shared/about
 - F: The update button names the version it found and installs it on one tap — the confirm dialog asked the same question a second time, and the tap before it had already answered
 - R: The card, the pills and the way on screen come from ../updater's UpdaterUi; only the facts are drawn here
 - F: The pills keep their 2dp outline, in the accent colour now, so a tinted button is the same shape as a filled one instead of a lighter blob on the card

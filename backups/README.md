@@ -17,8 +17,8 @@ whole thing is `MediaStore`, `SharedPreferences` and a `Thread`.
 android {
     sourceSets {
         getByName("main") {
-            // Kotlin projects: $rootDir/../backups   Flutter: $rootDir/../../backups
-            kotlin.directories.add("$rootDir/../backups/android/src")
+            // Kotlin projects: $rootDir/../shared/backups   Flutter: $rootDir/../../shared/backups
+            kotlin.directories.add("$rootDir/../shared/backups/android/src")
         }
     }
 }
