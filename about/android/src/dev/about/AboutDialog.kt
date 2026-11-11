@@ -141,7 +141,7 @@ internal object AboutDialog {
             // tap has nothing left to ask — see About's onUpdate.
             onProbe?.invoke { newerVersion ->
                 if (newerVersion != null) {
-                    ui.style(update, "${strings.update} $newerVersion", inverted = true)
+                    ui.style(update, "${strings.update} $newerVersion")
                 }
             }
         }

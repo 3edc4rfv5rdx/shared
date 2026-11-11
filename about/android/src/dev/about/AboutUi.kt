@@ -62,32 +62,30 @@ internal class AboutUi(val activity: Activity, val palette: AboutColors) {
      * ever be tall, so the ends stay semicircular whatever the text does to
      * the height.
      */
-    fun pill(label: String, inverted: Boolean = false, onClick: () -> Unit): TextView =
+    fun pill(label: String, onClick: () -> Unit): TextView =
         TextView(activity).apply {
             gravity = Gravity.CENTER
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 20f)
             setPadding(dp(14), dp(13), dp(14), dp(13))
             isClickable = true
-            style(this, label, inverted)
+            style(this, label)
             setOnClickListener { onClick() }
         }
 
     /**
      * What a pill says and how it is filled, in one place: About's update button
-     * is drawn once before the server has answered and again with the answer,
-     * and the two have to agree on everything but the fill.
+     * is drawn once before the server has answered and again with the answer.
      *
-     * The one the dialog is really asking for is filled; the rest are the
-     * accent drained to a tint, and both carry the outline.
+     * Every pill is filled with the accent alike — a pale tint for the lesser
+     * ones read as disabled rather than as a choice.
      */
-    fun style(pill: TextView, label: String, inverted: Boolean) {
+    fun style(pill: TextView, label: String) {
         pill.text = label
-        pill.setTextColor(if (inverted) palette.onAccent else palette.onAccentSoft)
+        pill.setTextColor(palette.onAccent)
         pill.background = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = dp(100).toFloat()
-            setColor(if (inverted) palette.accent else palette.accentSoft)
-            setStroke(dp(2), palette.pillStroke)
+            setColor(palette.accent)
         }
     }
 

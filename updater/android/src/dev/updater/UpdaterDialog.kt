@@ -97,7 +97,7 @@ internal object UpdaterDialog {
         var updating = false
         content.addView(
             ui.buttons(
-                ui.pill(strings.update, inverted = true) { updating = true; dialog.dismiss(); onUpdate() },
+                ui.pill(strings.update) { updating = true; dialog.dismiss(); onUpdate() },
                 ui.pill(strings.cancel) { dialog.dismiss(); onCancel() },
                 ui.pill(strings.later) { dialog.dismiss() },
             )

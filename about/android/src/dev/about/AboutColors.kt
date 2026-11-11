@@ -9,8 +9,8 @@ package dev.about
  * system's night flag and the activity's XML theme saying something else — and
  * a dialog that guesses wrong is a dialog nobody can read. The accent is the
  * one thing the app may hand over, through [About.accent]; every other shade is
- * worked out from it, so an app names one colour and the tint, the text on it
- * and the progress track still agree with each other.
+ * worked out from it, so an app names one colour and the text on the buttons,
+ * the links and the progress track still agree with it.
  */
 internal class AboutColors private constructor(
     /** The one action the dialog is really offering. */
@@ -28,24 +28,15 @@ internal class AboutColors private constructor(
     /** Text on top of [accent]: whichever of white and black reads better on it. */
     val onAccent = if (contrast(accent, WHITE) >= contrast(accent, BLACK)) WHITE else BLACK
 
-    /** Every other button: the accent drained to a tint. */
-    val accentSoft = mix(accent, WHITE, SOFT_SHARE)
-
-    /** Text on top of [accentSoft]: the accent darkened until it reads at a glance. */
-    val onAccentSoft = mix(accent, BLACK, DARK_SHARE)
-
-    /** The outline round every pill, so a tinted one keeps the filled one's shape. */
-    val pillStroke = accent
-
-    /** The part of ../updater's progress bar that has not filled yet. */
-    val track = accentSoft
+    /** The part of ../updater's progress bar that has not filled yet: the accent drained to a tint. */
+    val track = mix(accent, WHITE, TRACK_SHARE)
 
     /**
      * A link is text that acts, so it is drawn in the colour of the actions —
-     * unless that colour is too pale to read on white, and then in the darker
-     * shade the tinted buttons already write in.
+     * unless that colour is too pale to read on white, and then in the accent
+     * darkened until it does.
      */
-    val link = if (contrast(accent, WHITE) >= LINK_CONTRAST) accent else onAccentSoft
+    val link = if (contrast(accent, WHITE) >= LINK_CONTRAST) accent else mix(accent, BLACK, DARK_SHARE)
 
     companion object {
         /** Blue-grey: what every app gets that names no accent of its own. */
@@ -54,10 +45,10 @@ internal class AboutColors private constructor(
         private const val WHITE = 0xFFFFFFFF.toInt()
         private const val BLACK = 0xFF000000.toInt()
 
-        /** How much of the accent is left in [accentSoft]; the rest is white. */
-        private const val SOFT_SHARE = 0.25
+        /** How much of the accent is left in [track]; the rest is white. */
+        private const val TRACK_SHARE = 0.25
 
-        /** How much of the accent is left in [onAccentSoft]; the rest is black. */
+        /** How much of the accent is left in a darkened [link]; the rest is black. */
         private const val DARK_SHARE = 0.55
 
         /** The least contrast with the white card a link is drawn in the accent at. */

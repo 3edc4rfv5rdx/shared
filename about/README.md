@@ -85,9 +85,9 @@ AboutConfig(
 ```
 
 `description` puts a sentence above the facts, for an app whose name does not
-say what it is. The update button opens as "Check for updates" on the pale tint
-every other button uses and becomes a filled "Update" only once the server has
-confirmed there is a newer build, so it never promises one that is not there.
+say what it is. The update button opens as "Check for updates" and becomes
+"Update" with the version only once the server has confirmed there is a newer
+build, so it never promises one that is not there.
 Leaving `updates` out drops it altogether. `email` is a default — the same
 mailbox in every app — and is there to be overridden, not to be repeated.
 

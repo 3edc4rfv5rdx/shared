@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+- F: Every button is filled with the accent instead of the lesser ones being a pale tint
 - E: The dialog kit builds again: its colours were shadowed by GradientDrawable.colors inside the drawable builders, so the field is called palette now
 - N: About.accent sets the app's accent for every dialog, About's and ../updater's, blue-grey when unset
 - R: The module builds without ../updater, which now builds on it: AboutConfig names its repo, the update button comes from an optional AboutUpdates, and the dialog kit and palette live here

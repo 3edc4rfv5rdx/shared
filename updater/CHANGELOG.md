@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+- F: Every button is filled with the accent instead of the lesser ones being a pale tint
 - R: The dialogs are drawn with ../about's kit and colours, so they take the accent the app set in About.accent; UpdaterColors and UpdaterUi are gone, and AboutUpdater hands About its update button
 - F: Buttons, links and the progress bar are blue-grey instead of violet, so they stand out more on the white card
 - I: The module lives in the shared repository now, so the integration snippet points at ../shared/updater

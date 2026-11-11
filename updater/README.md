@@ -148,11 +148,11 @@ is a newer build: nothing is downloaded before the answer.
 
 The dialog is a plain `AlertDialog` rather than Compose or a Flutter widget: one
 updater serves both stacks. Its colours are its own rather than the host's, in
-`../about`'s `AboutColors` — a white card, black text, and outlined buttons, the
-filled one being whatever the dialog is really asking for, so the card About's
-update button opens is the card it came from. The buttons and the progress bar
-are blue-grey unless the app has set `About.accent`; the tint and the text on it
-are worked out from that one value, read each time a dialog is built.
+`../about`'s `AboutColors` — a white card, black text, and buttons filled with
+the accent, so the card About's update button opens is the card it came from.
+The buttons and the progress bar are blue-grey unless the app has set
+`About.accent`; the text on the buttons and the progress track are worked out
+from that one value, read each time a dialog is built.
 
 Strings are localized in `UpdaterStrings.kt` (en/ru/uk) rather than in
 `res/values-*`: shared sources have no `R` of their own, and reaching the app's
