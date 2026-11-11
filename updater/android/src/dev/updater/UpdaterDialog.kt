@@ -37,11 +37,11 @@ internal object UpdaterDialog {
         val radius = ui.dp(BAR_HEIGHT_DP / 2).toFloat()
         val track = GradientDrawable().apply {
             cornerRadius = radius
-            setColor(ui.colors.track)
+            setColor(ui.palette.track)
         }
         val fill = GradientDrawable().apply {
             cornerRadius = radius
-            setColor(ui.colors.accent)
+            setColor(ui.palette.accent)
         }
         val layers = LayerDrawable(
             arrayOf(track, ClipDrawable(fill, Gravity.START, ClipDrawable.HORIZONTAL))

@@ -44,7 +44,7 @@ internal object AboutDialog {
     private fun AboutUi.paragraph(text: String): TextView = TextView(activity).apply {
         this.text = text
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
-        setTextColor(colors.text)
+        setTextColor(palette.text)
         setPadding(0, 0, 0, dp(16))
     }
 
@@ -62,14 +62,14 @@ internal object AboutDialog {
             TextView(activity).apply {
                 text = label
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
-                setTextColor(colors.label)
+                setTextColor(palette.label)
             }
         )
         addView(
             TextView(activity).apply {
                 text = value
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f)
-                setTextColor(colors.text)
+                setTextColor(palette.text)
             }
         )
     }
@@ -78,7 +78,7 @@ internal object AboutDialog {
     private fun AboutUi.linkRow(label: String, value: String, onClick: () -> Unit): LinearLayout =
         row(label, value).apply {
             val text = getChildAt(1) as TextView
-            text.setTextColor(colors.link)
+            text.setTextColor(palette.link)
             text.paintFlags = text.paintFlags or Paint.UNDERLINE_TEXT_FLAG
             isClickable = true
             setOnClickListener { onClick() }

@@ -18,7 +18,7 @@ import android.widget.TextView
 /**
  * The pieces every dialog in these projects is made of — About's own and, when
  * the app carries it, ../updater's: one card, one title, one pill, one way of
- * putting a dialog on screen, in [colors].
+ * putting a dialog on screen, in [palette].
  *
  * Kept here rather than in the updater because About is the module every app
  * carries; the updater builds on it, never the other way round, so a build
@@ -28,7 +28,7 @@ import android.widget.TextView
  * is its own in every host instead of half-belonging to whichever toolkit the
  * host happens to use. Black on white, in every app and either theme.
  */
-internal class AboutUi(val activity: Activity, val colors: AboutColors) {
+internal class AboutUi(val activity: Activity, val palette: AboutColors) {
     private val density = activity.resources.displayMetrics.density
 
     fun dp(value: Int): Int = (value * density).toInt()
@@ -40,21 +40,21 @@ internal class AboutUi(val activity: Activity, val colors: AboutColors) {
         background = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = dp(16).toFloat()
-            setColor(colors.card)
+            setColor(palette.card)
         }
     }
 
     fun title(text: String): TextView = TextView(activity).apply {
         this.text = text
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 26f)
-        setTextColor(colors.text)
+        setTextColor(palette.text)
         setPadding(0, 0, 0, dp(16))
     }
 
     fun body(text: String): TextView = TextView(activity).apply {
         this.text = text
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 21f)
-        setTextColor(colors.text)
+        setTextColor(palette.text)
     }
 
     /**
@@ -82,12 +82,12 @@ internal class AboutUi(val activity: Activity, val colors: AboutColors) {
      */
     fun style(pill: TextView, label: String, inverted: Boolean) {
         pill.text = label
-        pill.setTextColor(if (inverted) colors.onAccent else colors.onAccentSoft)
+        pill.setTextColor(if (inverted) palette.onAccent else palette.onAccentSoft)
         pill.background = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = dp(100).toFloat()
-            setColor(if (inverted) colors.accent else colors.accentSoft)
-            setStroke(dp(2), colors.pillStroke)
+            setColor(if (inverted) palette.accent else palette.accentSoft)
+            setStroke(dp(2), palette.pillStroke)
         }
     }
 
