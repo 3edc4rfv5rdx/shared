@@ -9,21 +9,13 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
-import dev.updater.UpdaterColors
-import dev.updater.UpdaterUi
 
 /**
- * The About screen, built in code on ../updater's [UpdaterUi]: the card, the
- * pills and the way on screen are the kit's, so the card the update button
- * opens is the card it came from. What is written here is only what About
- * shows that no other dialog does.
+ * The About screen, built in code on [AboutUi]: the card, the pills and the
+ * way on screen are the kit's. What is written here is only what About shows
+ * that no other dialog does.
  */
 internal object AboutDialog {
-
-    /**
-     * What is About's own on top of [UpdaterUi]: the facts. A sentence, a
-     * labelled value, a value that opens something, and the scroller they go in.
-     */
 
     /**
      * The facts, in a scroller of their own.
@@ -32,7 +24,7 @@ internal object AboutDialog {
      * of its own to show, made the card taller than the screen and it was
      * the buttons at the bottom that went off it.
      */
-    private fun UpdaterUi.scroller(column: View): ScrollView = ScrollView(activity).apply {
+    private fun AboutUi.scroller(column: View): ScrollView = ScrollView(activity).apply {
         isFillViewport = false
         addView(
             column,
@@ -44,15 +36,15 @@ internal object AboutDialog {
     }
 
     /** A column of facts, to go inside the scroller. */
-    private fun UpdaterUi.column(): LinearLayout = LinearLayout(activity).apply {
+    private fun AboutUi.column(): LinearLayout = LinearLayout(activity).apply {
         orientation = LinearLayout.VERTICAL
     }
 
     /** A sentence, not a fact: no label above it and room under it. */
-    private fun UpdaterUi.paragraph(text: String): TextView = TextView(activity).apply {
+    private fun AboutUi.paragraph(text: String): TextView = TextView(activity).apply {
         this.text = text
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
-        setTextColor(UpdaterColors.text)
+        setTextColor(colors.text)
         setPadding(0, 0, 0, dp(16))
     }
 
@@ -63,30 +55,30 @@ internal object AboutDialog {
      * every width — a version, a date, a mail address — and a column wide
      * enough for the longest of them leaves the short ones stranded.
      */
-    private fun UpdaterUi.row(label: String, value: String): LinearLayout = LinearLayout(activity).apply {
+    private fun AboutUi.row(label: String, value: String): LinearLayout = LinearLayout(activity).apply {
         orientation = LinearLayout.VERTICAL
         setPadding(0, 0, 0, dp(12))
         addView(
             TextView(activity).apply {
                 text = label
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
-                setTextColor(UpdaterColors.label)
+                setTextColor(colors.label)
             }
         )
         addView(
             TextView(activity).apply {
                 text = value
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f)
-                setTextColor(UpdaterColors.text)
+                setTextColor(colors.text)
             }
         )
     }
 
     /** A row whose value is a link: underlined, and it opens something. */
-    private fun UpdaterUi.linkRow(label: String, value: String, onClick: () -> Unit): LinearLayout =
+    private fun AboutUi.linkRow(label: String, value: String, onClick: () -> Unit): LinearLayout =
         row(label, value).apply {
             val text = getChildAt(1) as TextView
-            text.setTextColor(UpdaterColors.link)
+            text.setTextColor(colors.link)
             text.paintFlags = text.paintFlags or Paint.UNDERLINE_TEXT_FLAG
             isClickable = true
             setOnClickListener { onClick() }
@@ -113,13 +105,14 @@ internal object AboutDialog {
         facts: List<Pair<String, String>>,
         repoUrl: String,
         email: String,
+        colors: AboutColors,
         onOpen: (String) -> Unit,
         onMail: (String) -> Unit,
         onUpdate: (() -> Unit)?,
         onProbe: (((newerVersion: String?) -> Unit) -> Unit)? = null,
     ) {
-        if (!UpdaterUi.alive(activity)) return
-        val ui = UpdaterUi(activity)
+        if (!AboutUi.alive(activity)) return
+        val ui = AboutUi(activity, colors)
         val content = ui.content()
         content.addView(ui.title(appName))
 
@@ -155,6 +148,6 @@ internal object AboutDialog {
         pills.add(ui.pill(strings.close) { dialog.dismiss() })
         content.addView(ui.buttons(*pills.toTypedArray()))
 
-        UpdaterUi.present(activity, dialog)
+        AboutUi.present(activity, dialog)
     }
 }

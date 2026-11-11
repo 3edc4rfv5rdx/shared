@@ -5,19 +5,29 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
-import dev.updater.UpdateInfo
-import dev.updater.Updater
 import java.util.Locale
 
 /**
  * The About screen, as one call.
  *
- * What is on it comes from three places and none of them is written twice: the
- * name and the version off the installed package, the repository address out of
- * the app's [dev.updater.UpdaterConfig], and the build date — the one fact no
- * API knows — out of [AboutConfig].
+ * What is on it comes from two places and none of it is written twice: the
+ * name and the version off the installed package, and the rest — the build
+ * date first, the one fact no API knows — out of [AboutConfig].
  */
 object About {
+
+    /**
+     * The app's accent as 0xAARRGGBB, for the buttons, the links and ../updater's
+     * progress bar; null leaves them blue-grey.
+     *
+     * One value for the process rather than a field of [AboutConfig]: the
+     * updater's start-up dialog comes up before anyone has opened About, and it
+     * has to be in the same colour. The app sets it when it starts and again
+     * whenever its accent changes — handed over, because this code cannot see a
+     * Compose or Flutter theme. Read when a dialog is built, never cached.
+     */
+    @Volatile
+    var accent: Int? = null
 
     /**
      * Puts the dialog up. Safe to call from anywhere a screen is on: an activity
@@ -27,7 +37,8 @@ object About {
         val strings = AboutStrings.of(Locale.getDefault())
         // The build the probe found for this card, if it has answered by the time
         // the user taps. One card's worth of state, gone with the call.
-        var offered: UpdateInfo? = null
+        var offered: AboutOffer? = null
+        val updates = config.updates
 
         val facts = mutableListOf(strings.version to versionName(activity))
         // A tree that has never been built through the scripts carries no date,
@@ -41,48 +52,34 @@ object About {
             appName = appName(activity),
             description = config.description,
             facts = facts,
-            repoUrl = config.updater.repoUrl,
+            repoUrl = config.repoUrl,
+            colors = AboutColors.current(),
             email = config.email,
             onOpen = { url -> open(activity, Intent(Intent.ACTION_VIEW, Uri.parse(url))) },
             onMail = { address ->
                 open(activity, Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:$address")))
             },
-            // Whatever the probe below found, held from the moment it answers until
-            // the button is tapped. Main thread on both sides: the probe posts its
-            // answer there and the tap arrives there, so there is nothing to guard.
-            onUpdate = if (config.offerUpdate) {
+            onUpdate = updates?.let { source ->
                 {
+                    // Whatever the probe below found, held from the moment it answers
+                    // until the button is tapped. Main thread on both sides: the probe
+                    // posts its answer there and the tap arrives there, so there is
+                    // nothing to guard. Nothing found, or no answer yet: the button
+                    // still reads as a check, so it does one.
                     val found = offered
-                    if (found != null) {
-                        // The button already said "Update 0.8.263" and the user
-                        // pressed it. A confirm dialog here would ask the same
-                        // question twice and fetch the same manifest again.
-                        Updater.install(activity, config.updater, found)
-                    } else {
-                        // Nothing found, or the probe has not answered yet: the
-                        // button still reads as a check, so it does one. The
-                        // start-up check keeps six hours between two looks at the
-                        // server, which is right for a phone and useless for a
-                        // build published a minute ago; this one ignores the
-                        // interval and reports what it found either way.
-                        Updater.checkNow(activity, config.updater)
-                    }
+                    if (found != null) found.install(activity) else source.checkNow(activity)
                 }
-            } else {
-                null
             },
             // Asked as the card comes up, so the button can name the version there
             // is to update to instead of promising one. This look decides nothing
             // and installs nothing; it only says what the button should read.
-            onProbe = if (config.offerUpdate) {
-                { answer ->
-                    Updater.peek(activity, config.updater) { info ->
-                        offered = info
-                        answer(info?.versionName)
+            onProbe = updates?.let { source ->
+                { answer: (String?) -> Unit ->
+                    source.peek(activity) { offer ->
+                        offered = offer
+                        answer(offer?.versionName)
                     }
                 }
-            } else {
-                null
             },
         )
     }

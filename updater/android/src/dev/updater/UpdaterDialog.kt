@@ -10,13 +10,19 @@ import android.view.ViewGroup
 import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
+import dev.about.AboutColors
+import dev.about.AboutUi
 
 /**
- * Every screen the updater puts up, built in code out of [UpdaterUi] — the
- * card, the pills and the way on screen are that kit's, shared with ../about;
- * what is here is which dialogs exist and what each one asks.
+ * Every screen the updater puts up, built in code out of ../about's [AboutUi] —
+ * the card, the pills, the colours and the way on screen are that kit's, so
+ * the updater looks like About and takes the accent the app gave it; what is
+ * here is which dialogs exist and what each one asks.
  */
 internal object UpdaterDialog {
+
+    /** A kit in the accent the app has set right now. */
+    private fun kit(activity: Activity) = AboutUi(activity, AboutColors.current())
 
     /** How tall the download bar is drawn, in dp. */
     private const val BAR_HEIGHT_DP = 14
@@ -27,15 +33,15 @@ internal object UpdaterDialog {
      * bar is a few pixels of the host's accent colour and ignores the height
      * it is given. The updater's own: nothing in ../about downloads.
      */
-    private fun progressBar(ui: UpdaterUi): ProgressBar {
+    private fun progressBar(ui: AboutUi): ProgressBar {
         val radius = ui.dp(BAR_HEIGHT_DP / 2).toFloat()
         val track = GradientDrawable().apply {
             cornerRadius = radius
-            setColor(UpdaterColors.track)
+            setColor(ui.colors.track)
         }
         val fill = GradientDrawable().apply {
             cornerRadius = radius
-            setColor(UpdaterColors.accent)
+            setColor(ui.colors.accent)
         }
         val layers = LayerDrawable(
             arrayOf(track, ClipDrawable(fill, Gravity.START, ClipDrawable.HORIZONTAL))
@@ -77,7 +83,7 @@ internal object UpdaterDialog {
         onCancel: () -> Unit,
         onClosed: (answered: Boolean) -> Unit,
     ): Boolean {
-        val ui = UpdaterUi(activity)
+        val ui = kit(activity)
         val content = ui.content()
         content.addView(ui.title(strings.title))
         content.addView(
@@ -98,17 +104,17 @@ internal object UpdaterDialog {
         )
         // Dismissal is delivered later on the main looper, not inside dismiss(), so
         // this is the one place that sees every way out of the dialog at once.
-        return UpdaterUi.present(activity, dialog) { answered -> if (!updating) onClosed(answered) }
+        return AboutUi.present(activity, dialog) { answered -> if (!updating) onClosed(answered) }
     }
 
     fun message(activity: Activity, text: String) {
-        val ui = UpdaterUi(activity)
+        val ui = kit(activity)
         val content = ui.content()
         content.addView(ui.body(text))
 
         val dialog = AlertDialog.Builder(activity).setView(content).create()
         content.addView(ui.buttons(ui.pill(activity.getString(android.R.string.ok)) { dialog.dismiss() }))
-        UpdaterUi.present(activity, dialog)
+        AboutUi.present(activity, dialog)
     }
 
     /**
@@ -125,7 +131,7 @@ internal object UpdaterDialog {
         onOpenSettings: () -> Unit,
         onClosed: () -> Unit,
     ): Boolean {
-        val ui = UpdaterUi(activity)
+        val ui = kit(activity)
         val content = ui.content()
         content.addView(ui.title(strings.installSourcesTitle))
         content.addView(ui.body(strings.installSourcesBody))
@@ -137,7 +143,7 @@ internal object UpdaterDialog {
                 ui.pill(strings.cancel) { dialog.dismiss() },
             )
         )
-        return UpdaterUi.present(activity, dialog) { onClosed() }
+        return AboutUi.present(activity, dialog) { onClosed() }
     }
 
     /**
@@ -158,7 +164,7 @@ internal object UpdaterDialog {
         private val dialog: AlertDialog
 
         init {
-            val ui = UpdaterUi(activity)
+            val ui = kit(activity)
             label = ui.body(strings.downloading)
             bar = progressBar(ui)
 
@@ -181,7 +187,7 @@ internal object UpdaterDialog {
         }
 
         /** False when there is no activity to show it on, and no download should start. */
-        fun show(): Boolean = UpdaterUi.present(activity, dialog)
+        fun show(): Boolean = AboutUi.present(activity, dialog)
 
         /** Called from the main thread as bytes arrive. */
         fun update(downloaded: Long, total: Long) {

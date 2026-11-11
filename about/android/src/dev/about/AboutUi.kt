@@ -1,4 +1,4 @@
-package dev.updater
+package dev.about
 
 import android.app.Activity
 import android.app.AlertDialog
@@ -16,18 +16,19 @@ import android.widget.LinearLayout
 import android.widget.TextView
 
 /**
- * The pieces every dialog in these projects is made of — the updater's own and
- * ../about's alike — in the colours [UpdaterColors] keeps for both.
+ * The pieces every dialog in these projects is made of — About's own and, when
+ * the app carries it, ../updater's: one card, one title, one pill, one way of
+ * putting a dialog on screen, in [colors].
  *
- * One card, one title, one pill, one way of putting a dialog on screen, written
- * here once: the two modules draw the same card, and a card that changes shape
- * in one of them and not the other reads as two different apps talking.
+ * Kept here rather than in the updater because About is the module every app
+ * carries; the updater builds on it, never the other way round, so a build
+ * that leaves the updater out loses nothing About needs.
  *
  * Nothing here is Compose or Flutter: one kit serves both stacks, so its look
  * is its own in every host instead of half-belonging to whichever toolkit the
  * host happens to use. Black on white, in every app and either theme.
  */
-internal class UpdaterUi(val activity: Activity) {
+internal class AboutUi(val activity: Activity, val colors: AboutColors) {
     private val density = activity.resources.displayMetrics.density
 
     fun dp(value: Int): Int = (value * density).toInt()
@@ -39,21 +40,21 @@ internal class UpdaterUi(val activity: Activity) {
         background = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = dp(16).toFloat()
-            setColor(UpdaterColors.card)
+            setColor(colors.card)
         }
     }
 
     fun title(text: String): TextView = TextView(activity).apply {
         this.text = text
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 26f)
-        setTextColor(UpdaterColors.text)
+        setTextColor(colors.text)
         setPadding(0, 0, 0, dp(16))
     }
 
     fun body(text: String): TextView = TextView(activity).apply {
         this.text = text
         setTextSize(TypedValue.COMPLEX_UNIT_SP, 21f)
-        setTextColor(UpdaterColors.text)
+        setTextColor(colors.text)
     }
 
     /**
@@ -72,21 +73,21 @@ internal class UpdaterUi(val activity: Activity) {
         }
 
     /**
-     * What a pill says and how it is filled, in one place: a pill can be drawn
-     * once before an answer is known and again with it — ../about's update
-     * button is — and the two have to agree on everything but the fill.
+     * What a pill says and how it is filled, in one place: About's update button
+     * is drawn once before the server has answered and again with the answer,
+     * and the two have to agree on everything but the fill.
      *
-     * The one the dialog is really asking for is filled; the rest are the same
-     * blue-grey drained to a tint, and both carry the outline.
+     * The one the dialog is really asking for is filled; the rest are the
+     * accent drained to a tint, and both carry the outline.
      */
     fun style(pill: TextView, label: String, inverted: Boolean) {
         pill.text = label
-        pill.setTextColor(if (inverted) UpdaterColors.onAccent else UpdaterColors.onAccentSoft)
+        pill.setTextColor(if (inverted) colors.onAccent else colors.onAccentSoft)
         pill.background = GradientDrawable().apply {
             shape = GradientDrawable.RECTANGLE
             cornerRadius = dp(100).toFloat()
-            setColor(if (inverted) UpdaterColors.accent else UpdaterColors.accentSoft)
-            setStroke(dp(2), UpdaterColors.pillStroke)
+            setColor(if (inverted) colors.accent else colors.accentSoft)
+            setStroke(dp(2), colors.pillStroke)
         }
     }
 
@@ -160,7 +161,7 @@ internal class UpdaterUi(val activity: Activity) {
             window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
             // Centred on purpose: a host on the platform's own DeviceDefault theme
             // gets whatever the vendor does with dialogs, and One UI slides them to
-            // the bottom edge. One dialog in eight apps means one position too.
+            // the bottom edge. One dialog in every app means one position too.
             window?.setGravity(Gravity.CENTER)
             // Force Dark would repaint this hierarchy on its own in a dark host — the
             // white card turned dark and the black text light, which is exactly the
@@ -174,7 +175,7 @@ internal class UpdaterUi(val activity: Activity) {
             // the percentage climbs, and a card measured from its content would step
             // wider three times on the way to 100%. It also settles the confirm
             // dialog, whose width would otherwise follow the length of a version
-            // string. One dialog in eight apps means one width too.
+            // string. One dialog in every app means one width too.
             window?.setLayout(width(activity), ViewGroup.LayoutParams.WRAP_CONTENT)
             return true
         }

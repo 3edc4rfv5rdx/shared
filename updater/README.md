@@ -40,6 +40,11 @@ simply not compiled — the build fails on unresolved references to `dev.updater
 favour of that mutable set. On an older AGP, `kotlin.srcDir("…")` is the same
 thing without the warning.
 
+`../about/android/src` has to be on the list too: the updater draws its dialogs
+with About's kit and in About's colours, and hands About its update button as
+`AboutUpdater(config)`. The dependency runs one way — About builds without the
+updater, so a store build simply leaves `updater/android/src` out.
+
 No dependencies are added: the updater runs on `HttpURLConnection`,
 `MessageDigest`, `org.json` and `FileProvider` — everything already present.
 
@@ -143,9 +148,11 @@ is a newer build: nothing is downloaded before the answer.
 
 The dialog is a plain `AlertDialog` rather than Compose or a Flutter widget: one
 updater serves both stacks. Its colours are its own rather than the host's, in
-`UpdaterColors` — a white card, black text, and outlined blue-grey buttons, the
-filled one being whatever the dialog is really asking for. `../about` draws from the same
-file, so the card its update button opens is the card it came from.
+`../about`'s `AboutColors` — a white card, black text, and outlined buttons, the
+filled one being whatever the dialog is really asking for, so the card About's
+update button opens is the card it came from. The buttons and the progress bar
+are blue-grey unless the app has set `About.accent`; the tint and the text on it
+are worked out from that one value, read each time a dialog is built.
 
 Strings are localized in `UpdaterStrings.kt` (en/ru/uk) rather than in
 `res/values-*`: shared sources have no `R` of their own, and reaching the app's

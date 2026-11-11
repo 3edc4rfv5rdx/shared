@@ -3,6 +3,8 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+- N: About.accent sets the app's accent for every dialog, About's and ../updater's, blue-grey when unset
+- R: The module builds without ../updater, which now builds on it: AboutConfig names its repo, the update button comes from an optional AboutUpdates, and the dialog kit and palette live here
 - F: The buttons and links are blue-grey instead of violet, taken from ../updater's new default palette
 - I: The module lives in the shared repository now, so the integration snippet points at ../shared/about
 - F: The update button names the version it found and installs it on one tap — the confirm dialog asked the same question a second time, and the tap before it had already answered

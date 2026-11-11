@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+- R: The dialogs are drawn with ../about's kit and colours, so they take the accent the app set in About.accent; UpdaterColors and UpdaterUi are gone, and AboutUpdater hands About its update button
 - F: Buttons, links and the progress bar are blue-grey instead of violet, so they stand out more on the white card
 - I: The module lives in the shared repository now, so the integration snippet points at ../shared/updater
 - E: An app kept alive in the background asks the server again when it is brought back an hour after the last answer, instead of never again in that process
