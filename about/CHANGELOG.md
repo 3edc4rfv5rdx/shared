@@ -3,6 +3,7 @@
 > N=new feature, E=error fix, F=fine-tune, R=refactor, I=infrastructure
 
 ## Unreleased
+- F: The buttons and links are blue-grey instead of violet, taken from ../updater's new default palette
 - I: The module lives in the shared repository now, so the integration snippet points at ../shared/about
 - F: The update button names the version it found and installs it on one tap — the confirm dialog asked the same question a second time, and the tap before it had already answered
 - R: The card, the pills and the way on screen come from ../updater's UpdaterUi; only the facts are drawn here

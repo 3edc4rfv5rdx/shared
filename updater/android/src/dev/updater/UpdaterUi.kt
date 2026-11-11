@@ -77,7 +77,7 @@ internal class UpdaterUi(val activity: Activity) {
      * button is — and the two have to agree on everything but the fill.
      *
      * The one the dialog is really asking for is filled; the rest are the same
-     * violet drained to a tint, and both carry the outline.
+     * blue-grey drained to a tint, and both carry the outline.
      */
     fun style(pill: TextView, label: String, inverted: Boolean) {
         pill.text = label

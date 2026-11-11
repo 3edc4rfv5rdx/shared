@@ -8,7 +8,7 @@ package dev.updater
  * drawing in — one that picks its theme in Compose leaves both the system's
  * night flag and the activity's XML theme saying something else — and a dialog
  * that guesses wrong is a dialog nobody can read. Written once here because two
- * modules draw the same card, and a card that is violet in one of them and black
+ * modules draw the same card, and a card that is blue-grey in one of them and black
  * in the other reads as two different apps talking.
  */
 object UpdaterColors {
@@ -23,16 +23,16 @@ object UpdaterColors {
     val label = 0xFF666666.toInt()
 
     /** The one action a dialog is really offering, and the bar that runs it. */
-    val accent = 0xFF6750A4.toInt()
+    val accent = 0xFF455A64.toInt()
 
     /** Text on top of [accent]. */
     val onAccent = 0xFFFFFFFF.toInt()
 
-    /** Every other button: the same violet drained to a tint, and no outline. */
-    val accentSoft = 0xFFEADDFF.toInt()
+    /** Every other button: the same blue-grey drained to a tint, outlined in it. */
+    val accentSoft = 0xFFCFD8DC.toInt()
 
     /** Text on top of [accentSoft] — dark enough to be read at a glance. */
-    val onAccentSoft = 0xFF4F378B.toInt()
+    val onAccentSoft = 0xFF263238.toInt()
 
     /**
      * The outline round every pill. The accent itself, so a filled button keeps

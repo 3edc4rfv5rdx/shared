@@ -14,7 +14,7 @@ The dialog is drawn in code rather than in Compose, for the same reason the
 updater's are: one copy serves Compose apps and Flutter apps alike, so its look
 belongs to it in all of them instead of half-belonging to whichever toolkit the
 host happens to use. The card, the pills and the way on screen are `UpdaterUi`,
-the kit `../updater` keeps for both modules, in the violet of `UpdaterColors`;
+the kit `../updater` keeps for both modules, in the blue-grey of `UpdaterColors`;
 only the facts are drawn here.
 
 ## What it costs a project
@@ -71,7 +71,7 @@ AboutConfig(
 
 `description` puts a sentence above the facts, for an app whose name does not
 say what it is. The update button opens as "Check for updates" on the pale
-violet every other button uses and becomes a filled "Update" only once the server
+blue-grey every other button uses and becomes a filled "Update" only once the server
 has confirmed there is a newer build, so it never promises one that is not
 there. `offerUpdate = false` drops it
 altogether, for an app whose builds are not published as releases. `email` is a default — the same mailbox in every app —

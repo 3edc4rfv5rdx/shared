@@ -143,7 +143,7 @@ is a newer build: nothing is downloaded before the answer.
 
 The dialog is a plain `AlertDialog` rather than Compose or a Flutter widget: one
 updater serves both stacks. Its colours are its own rather than the host's, in
-`UpdaterColors` — a white card, black text, and outlined violet buttons, the
+`UpdaterColors` — a white card, black text, and outlined blue-grey buttons, the
 filled one being whatever the dialog is really asking for. `../about` draws from the same
 file, so the card its update button opens is the card it came from.
 
